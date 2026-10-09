@@ -21,6 +21,10 @@ function (generate_cfs_startup_script CFS_INSTALL_DIR)
         "CFE_APP, ci_lab,      CI_LAB_AppMain,     CI_LAB,       40,   32768, 0x0, 0;\n"
         "CFE_APP, to_lab,      TO_LAB_AppMain,     TO_LAB,       45,   32768, 0x0, 0;\n"
         "CFE_APP, sample_app,  SAMPLE_APP_Main,    SAMPLE_APP,   50,   32768, 0x0, 0;\n"
+        "CFE_APP, adcs_app,    ADCS_APP_Main,      ADCS_APP,     52,   32768, 0x0, 0;\n"
+        "CFE_APP, act_app,     ACT_APP_Main,       ACT_APP,      54,   32768, 0x0, 0;\n"
+        "CFE_APP, imu_app,     IMU_APP_Main,       IMU_APP,      56,   32768, 0x0, 0;\n"
+        "CFE_APP, light_app,   LIGHT_APP_Main,     LIGHT_APP,    58,   32768, 0x0, 0;\n"
     )
 
     # the rest of the apps can vary by config

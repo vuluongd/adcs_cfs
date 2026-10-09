@@ -1,2 +1,4 @@
 /build*/
 
+build-native_std/
+.vscode/
