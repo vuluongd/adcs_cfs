@@ -24,6 +24,13 @@
 
 #include "adcs_app.h"
 #include "utgenstub.h"
+#include "adcs_app_light.h"
+
+void ADCS_APP_ReceiveLight(const CFE_SB_Buffer_t *buffer)
+{
+    UT_GenStub_AddParam(ADCS_APP_ReceiveLight, const CFE_SB_Buffer_t *, buffer);
+    UT_GenStub_Execute(ADCS_APP_ReceiveLight, Basic, NULL);
+}
 
 /*
  * ----------------------------------------------------

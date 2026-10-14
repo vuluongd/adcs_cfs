@@ -30,6 +30,8 @@
 #include "adcs_app_eventids.h"
 #include "adcs_app_msgids.h"
 #include "adcs_app_msg.h"
+#include "light_app_msgids.h"
+#include "adcs_app_light.h"
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * **/
 /*                                                                            */
@@ -146,7 +148,11 @@ void ADCS_APP_TaskPipe(const CFE_SB_Buffer_t *SBBufPtr)
     CFE_MSG_GetMsgId(&SBBufPtr->Msg, &MsgId);
 
     /* Process all SB messages */
-    if (CFE_SB_MsgId_Equal(MsgId, SEND_HK_MID))
+    if (CFE_SB_MsgId_Equal(MsgId, CFE_SB_ValueToMsgId(LIGHT_APP_DATA_MID)))
+    {
+        ADCS_APP_ReceiveLight(SBBufPtr);
+    }
+    else if (CFE_SB_MsgId_Equal(MsgId, SEND_HK_MID))
     {
         /* Housekeeping request */
         ADCS_APP_SendHkCmd((const ADCS_APP_SendHkCmd_t *)SBBufPtr);

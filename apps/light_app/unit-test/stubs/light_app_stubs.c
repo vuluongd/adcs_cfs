@@ -24,6 +24,7 @@
 
 #include "light_app.h"
 #include "utgenstub.h"
+#include "light_app_tracking.h"
 
 /*
  * ----------------------------------------------------
@@ -47,4 +48,19 @@ CFE_Status_t LIGHT_APP_Init(void)
 void LIGHT_APP_Main(void)
 {
     UT_GenStub_Execute(LIGHT_APP_Main, Basic, NULL);
+}
+
+CFE_Status_t LIGHT_APP_TrackingInit(void)
+{
+    UT_GenStub_SetupReturnBuffer(LIGHT_APP_TrackingInit, CFE_Status_t);
+    UT_GenStub_Execute(LIGHT_APP_TrackingInit, Basic, NULL);
+    return UT_GenStub_GetReturnValue(LIGHT_APP_TrackingInit, CFE_Status_t);
+}
+void LIGHT_APP_OnWakeup(void)
+{
+    UT_GenStub_Execute(LIGHT_APP_OnWakeup, Basic, NULL);
+}
+void LIGHT_APP_TrackingClose(void)
+{
+    UT_GenStub_Execute(LIGHT_APP_TrackingClose, Basic, NULL);
 }

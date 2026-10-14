@@ -1,0 +1,7 @@
+set(MISSION_NAME "LightDemo")
+set(SPACECRAFT_ID 0x42)
+set(MISSION_CPUNAMES cpu1)
+set(cpu1_PROCESSORID 1)
+set(cpu1_APPLIST sample_lib sch_lab light_app adcs_app)
+set(cpu1_SYSTEM native)
+set(cpu1_FILELIST cfe_es_startup.scr)

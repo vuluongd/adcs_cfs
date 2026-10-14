@@ -31,6 +31,7 @@
 #include "adcs_app_dispatch.h"
 #include "adcs_app_tbl.h"
 #include "adcs_app_version.h"
+#include "light_app_msgids.h"
 
 /*
 ** global data
@@ -215,5 +216,9 @@ CFE_Status_t ADCS_APP_Init(void)
                           VersionString);
     }
 
+    if (status == CFE_SUCCESS)
+    {
+        status = CFE_SB_Subscribe(CFE_SB_ValueToMsgId(LIGHT_APP_DATA_MID), ADCS_APP_Data.CommandPipe);
+    }
     return status;
 }

@@ -17,9 +17,10 @@ else()
 endif()
 
 # Create the app module
-add_cfe_app(adcs_app ${APP_SRC_FILES})
+add_cfe_app(adcs_app ${APP_SRC_FILES} fsw/src/adcs_app_light.c)
 
 target_include_directories(adcs_app PUBLIC fsw/inc)
+target_include_directories(adcs_app PUBLIC ../light_app/fsw/inc)
 # Include the public API from sample_lib to demonstrate how
 # to call library-provided functions
 add_cfe_app_dependency(adcs_app sample_lib)

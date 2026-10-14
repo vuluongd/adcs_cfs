@@ -37,6 +37,7 @@
 #include "light_app_perfids.h"
 #include "light_app_msgids.h"
 #include "light_app_msg.h"
+#include "light_data.h"
 
 /************************************************************************
 ** Type Definitions

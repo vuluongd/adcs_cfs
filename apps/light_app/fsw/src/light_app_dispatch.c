@@ -30,6 +30,7 @@
 #include "light_app_eventids.h"
 #include "light_app_msgids.h"
 #include "light_app_msg.h"
+#include "light_app_tracking.h"
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * **/
 /*                                                                            */
@@ -146,7 +147,14 @@ void LIGHT_APP_TaskPipe(const CFE_SB_Buffer_t *SBBufPtr)
     CFE_MSG_GetMsgId(&SBBufPtr->Msg, &MsgId);
 
     /* Process all SB messages */
-    if (CFE_SB_MsgId_Equal(MsgId, SEND_HK_MID))
+    if (CFE_SB_MsgId_Equal(MsgId, CFE_SB_ValueToMsgId(LIGHT_APP_WAKEUP_MID)))
+    {
+        if (LIGHT_APP_VerifyCmdLength(&SBBufPtr->Msg, sizeof(LIGHT_WakeupCmd_t)))
+        {
+            LIGHT_APP_OnWakeup();
+        }
+    }
+    else if (CFE_SB_MsgId_Equal(MsgId, SEND_HK_MID))
     {
         /* Housekeeping request */
         LIGHT_APP_SendHkCmd((const LIGHT_APP_SendHkCmd_t *)SBBufPtr);

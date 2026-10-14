@@ -31,6 +31,7 @@
 #include "light_app_dispatch.h"
 #include "light_app_tbl.h"
 #include "light_app_version.h"
+#include "light_app_tracking.h"
 
 /*
 ** global data
@@ -100,6 +101,7 @@ void LIGHT_APP_Main(void)
     */
     CFE_ES_PerfLogExit(LIGHT_APP_PERF_ID);
 
+    LIGHT_APP_TrackingClose();
     CFE_ES_ExitApp(LIGHT_APP_Data.RunStatus);
 }
 
@@ -215,5 +217,9 @@ CFE_Status_t LIGHT_APP_Init(void)
                           VersionString);
     }
 
+    if (status == CFE_SUCCESS)
+    {
+        status = LIGHT_APP_TrackingInit();
+    }
     return status;
 }

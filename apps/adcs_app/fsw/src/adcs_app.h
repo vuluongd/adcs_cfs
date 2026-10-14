@@ -37,6 +37,7 @@
 #include "adcs_app_perfids.h"
 #include "adcs_app_msgids.h"
 #include "adcs_app_msg.h"
+#include "light_data.h"
 
 /************************************************************************
 ** Type Definitions
@@ -57,6 +58,10 @@ typedef struct
     ** Housekeeping telemetry packet...
     */
     ADCS_APP_HkTlm_t HkTlm;
+
+    LIGHT_DataPayload_t Light;
+    CFE_TIME_SysTime_t LightTimestamp;
+    bool LightReceived;
 
     /*
     ** Run Status variable used in the main processing loop
