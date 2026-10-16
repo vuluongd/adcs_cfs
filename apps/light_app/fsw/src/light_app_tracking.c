@@ -35,9 +35,23 @@ void LIGHT_APP_OnWakeup(void)
     float left, right;
     uint8_t status = LIGHT_SensorRead(&Sensor, &left, &right);
     CFE_Status_t tx_status;
+
     LIGHT_Estimate(&Config, &Filter, left, right, status, &Tlm.Payload);
     Tlm.Payload.sample_counter = ++Counter;
     Tlm.Payload.simulated = Sensor.hardware ? 0 : 1;
+
+    /* ===== IN RA CONSOLE ===== */
+    printf(">>> LIGHT [%u]  L=%.1f  R=%.1f  diff=%.3f  angle=%.1f deg  valid=%d  status=%d  sim=%d\n",
+           Tlm.Payload.sample_counter,
+           Tlm.Payload.left_lux,
+           Tlm.Payload.right_lux,
+           Tlm.Payload.normalized_diff,
+           Tlm.Payload.bearing_rad * 57.2957795f,
+           Tlm.Payload.valid,
+           Tlm.Payload.status,
+           Tlm.Payload.simulated);
+    /* ======================== */
+
     CFE_SB_TimeStampMsg(CFE_MSG_PTR(Tlm.TelemetryHeader));
     tx_status = CFE_SB_TransmitMsg(CFE_MSG_PTR(Tlm.TelemetryHeader), true);
     if (tx_status != CFE_SUCCESS)

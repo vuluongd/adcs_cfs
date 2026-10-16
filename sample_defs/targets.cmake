@@ -123,7 +123,7 @@ SET(MISSION_CPUNAMES cpu1)
 # Skip cpu2 on the pc686_rtems5 configuration, as it becomes a resource drain
 # (the images on this configuration are much larger)
 if (NOT SIMULATION STREQUAL "i686-rtems5")
-    list(APPEND MISSION_CPUNAMES cpu2)
+    # list(APPEND MISSION_CPUNAMES cpu2)
 endif ()
 
 # The "cpu1" is a contrived example of a main processor, running
