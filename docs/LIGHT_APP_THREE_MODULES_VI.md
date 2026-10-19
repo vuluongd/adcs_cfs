@@ -1,10 +1,4 @@
 # Ba file C: góc, dữ liệu ảo, chân I2C
-
-Phiên bản này bổ sung đúng ba file .c vào apps/light_app/fsw/src, có khai báo
-hàm trong hai header sẵn có light_tracking.h và light_sensor.h. CMake và các
-file gọi hàm đã được cập nhật để sử dụng các module mới, không chỉ chép ba file
-rời rồi bỏ đó. Driver thật hiện dành cho Linux/Raspberry Pi.
-
 ## 1. light_angle.c — xác định góc
 
 Hàm LIGHT_AngleFromError(&config,error,&angle_rad) nhận chênh lệch sáng chuẩn
