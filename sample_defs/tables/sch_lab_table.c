@@ -37,6 +37,7 @@
 #include "ds_msgids.h"
 #include "hk_msgids.h"
 #include "light_app_msgids.h"
+#include "imu_app_msgids.h"
 
 #ifdef CFS_SBN_ENABLED
 #include "sbn_msgids.h"
@@ -58,6 +59,7 @@ SCH_LAB_ScheduleTable_t SCH_TBL_Structure =
     .TickRate = 10,
     .Config   = {
         {CFE_SB_MSGID_WRAP_VALUE(LIGHT_APP_WAKEUP_MID),   2, 0}, /* LIGHT at 5Hz / 200ms */
+        {CFE_SB_MSGID_WRAP_VALUE(IMU_APP_WAKEUP_MID), 1, 0}, /* IMU at 10Hz */
         {CFE_SB_MSGID_WRAP_VALUE(CFE_ES_SEND_HK_MID),     40, 0}, /* every 4.0 seconds */
         {CFE_SB_MSGID_WRAP_VALUE(CFE_EVS_SEND_HK_MID),    42, 0}, /* every 4.2 seconds */
         {CFE_SB_MSGID_WRAP_VALUE(CFE_TIME_SEND_HK_MID),   44, 0}, /* every 4.4 seconds */

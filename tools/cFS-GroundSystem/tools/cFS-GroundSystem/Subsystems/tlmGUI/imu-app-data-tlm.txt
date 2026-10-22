@@ -1,0 +1,16 @@
+# 
+# imu-app-data-tlm.txt
+# IMU_DATA packet definition (MID 0x08D4)
+# Offset starts after the Telemetry Header (12 bytes)
+#
+Raw Rate (rad/s),    12,  4,  f, Dec, NULL, NULL, NULL, NULL
+Rate (rad/s),        16,  4,  f, Dec, NULL, NULL, NULL, NULL
+Angle (rad),         20,  4,  f, Dec, NULL, NULL, NULL, NULL
+Bias (rad/s),        24,  4,  f, Dec, NULL, NULL, NULL, NULL
+Temp (C),            28,  4,  f, Dec, NULL, NULL, NULL, NULL
+dt (s),              32,  4,  f, Dec, NULL, NULL, NULL, NULL
+Sample Counter,      36,  4,  I, Dec, NULL, NULL, NULL, NULL
+Valid,               40,  1,  B, Dec, NULL, NULL, NULL, NULL
+Status,              41,  1,  B, Dec, NULL, NULL, NULL, NULL
+Stationary,          42,  1,  B, Dec, NULL, NULL, NULL, NULL
+Simulated,           43,  1,  B, Dec, NULL, NULL, NULL, NULL
