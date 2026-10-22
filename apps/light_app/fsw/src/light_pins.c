@@ -1,10 +1,3 @@
-/* XAC DINH CHAN: chon board -> tra GPIO, chan vat ly, dia chi I2C.
- * KHONG the tu nhan ra day SDA/SCL dang cam vao dau bang file nay.
- * Raspberry Pi 3: BCM GPIO2/SDA, GPIO3/SCL; physical 3/5.
- * ESP32 classic/Generic ESP32: GPIO21/SDA, GPIO22/SCL; board khac co the khac.
- * Sources: raspberrypi.com/documentation/computers/raspberry-pi.html
- *          docs.espressif.com/projects/arduino-esp32/en/latest/api/i2c.html
- */
 #include "light_sensor.h"
 #include <stddef.h>
 

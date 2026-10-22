@@ -104,3 +104,18 @@ CFE_Status_t IMU_APP_SendHkCmd(const IMU_APP_SendHkCmd_t *Msg)
 
     return UT_GenStub_GetReturnValue(IMU_APP_SendHkCmd, CFE_Status_t);
 }
+CFE_Status_t IMU_APP_RecalibrateCmd(const IMU_APP_RecalibrateCmd_t *Msg)
+{
+    UT_GenStub_SetupReturnBuffer(IMU_APP_RecalibrateCmd, CFE_Status_t);
+    UT_GenStub_AddParam(IMU_APP_RecalibrateCmd, const IMU_APP_RecalibrateCmd_t *, Msg);
+    UT_GenStub_Execute(IMU_APP_RecalibrateCmd, Basic, NULL);
+    return UT_GenStub_GetReturnValue(IMU_APP_RecalibrateCmd, CFE_Status_t);
+}
+
+CFE_Status_t IMU_APP_ResetAngleCmd(const IMU_APP_ResetAngleCmd_t *Msg)
+{
+    UT_GenStub_SetupReturnBuffer(IMU_APP_ResetAngleCmd, CFE_Status_t);
+    UT_GenStub_AddParam(IMU_APP_ResetAngleCmd, const IMU_APP_ResetAngleCmd_t *, Msg);
+    UT_GenStub_Execute(IMU_APP_ResetAngleCmd, Basic, NULL);
+    return UT_GenStub_GetReturnValue(IMU_APP_ResetAngleCmd, CFE_Status_t);
+}
