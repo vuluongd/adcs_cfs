@@ -25,6 +25,7 @@ function (generate_cfs_startup_script CFS_INSTALL_DIR)
         "CFE_APP, act_app,     ACT_APP_Main,       ACT_APP,      54,   32768, 0x0, 0;\n"
         "CFE_APP, imu_app,     IMU_APP_Main,       IMU_APP,      56,   32768, 0x0, 0;\n"
         "CFE_APP, light_app,   LIGHT_APP_Main,     LIGHT_APP,    58,   32768, 0x0, 0;\n"
+        "CFE_APP, camera_app,  CAMERA_APP_Main,    CAMERA_APP,   60,   32768, 0x0, 0;\n"
     )
 
     # the rest of the apps can vary by config

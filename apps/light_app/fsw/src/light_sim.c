@@ -1,7 +1,3 @@
-/* DU LIEU AO: lux + goc that trong MO HINH GIA de thu LIGHT_APP/ADCS_APP.
- * Chu ky 80 mau = 16 giay tai wakeup 5Hz, goc +/-30 do.
- * Bang duoi day KHONG PHẢI bang hieu chuan cua BH1750 that.
- */
 #include "light_tracking.h"
 #include <math.h>
 
