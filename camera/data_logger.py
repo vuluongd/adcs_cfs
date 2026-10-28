@@ -1,12 +1,4 @@
-"""
-ADCS 1-DOF — Data Logger Module
-================================
-Ghi dữ liệu IMU, cảm biến ánh sáng và trạng thái hệ thống
-ra file CSV trên SD card theo timestamp.
 
-Người thực hiện : Hoàn
-Dự án           : ADCS 1-DOF — Nhóm 2
-"""
 
 import csv
 import os
@@ -22,7 +14,7 @@ from typing import Optional
 # Cấu hình đường dẫn log
 # ──────────────────────────────────────────────
 # Trên Raspberry Pi: đổi thành "/home/pi/logs" hoặc "/mnt/sdcard/logs"
-LOG_DIR = Path("./logs")
+LOG_DIR = Path("/logs")
 
 # Bao nhiêu dòng thì flush (ghi) xuống file một lần
 FLUSH_INTERVAL = 10          # dòng
