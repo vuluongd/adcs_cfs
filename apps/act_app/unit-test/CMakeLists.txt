@@ -28,6 +28,7 @@ add_cfe_coverage_stubs(act_app
   stubs/act_app_cmds_stubs.c
   stubs/act_app_dispatch_stubs.c
   stubs/act_app_utils_stubs.c
+  stubs/act_app_wheel_stubs.c
 )
 
 add_library(act_app_ut_common STATIC

@@ -40,6 +40,8 @@ enum ACT_APP_FunctionCode_
     ACT_APP_FunctionCode_RESET_COUNTERS = 1,
     ACT_APP_FunctionCode_PROCESS        = 2,
     ACT_APP_FunctionCode_DISPLAY_PARAM  = 3,
+    ACT_APP_FunctionCode_SET_WHEEL_SPEED = 4, /* ACT_CMD: wheel speed setpoint (rad/s) */
+    ACT_APP_FunctionCode_STOP_WHEEL      = 5, /* ramp to zero and brake */
 };
 
 #endif

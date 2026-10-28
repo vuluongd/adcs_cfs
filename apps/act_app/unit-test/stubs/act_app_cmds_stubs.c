@@ -104,3 +104,29 @@ CFE_Status_t ACT_APP_SendHkCmd(const ACT_APP_SendHkCmd_t *Msg)
 
     return UT_GenStub_GetReturnValue(ACT_APP_SendHkCmd, CFE_Status_t);
 }
+
+/*
+ * ----------------------------------------------------
+ * Generated stub function for ACT_APP_SetWheelSpeedCmd()
+ * ----------------------------------------------------
+ */
+CFE_Status_t ACT_APP_SetWheelSpeedCmd(const ACT_APP_SetWheelSpeedCmd_t *Msg)
+{
+    UT_GenStub_SetupReturnBuffer(ACT_APP_SetWheelSpeedCmd, CFE_Status_t);
+    UT_GenStub_AddParam(ACT_APP_SetWheelSpeedCmd, const ACT_APP_SetWheelSpeedCmd_t *, Msg);
+    UT_GenStub_Execute(ACT_APP_SetWheelSpeedCmd, Basic, NULL);
+    return UT_GenStub_GetReturnValue(ACT_APP_SetWheelSpeedCmd, CFE_Status_t);
+}
+
+/*
+ * ----------------------------------------------------
+ * Generated stub function for ACT_APP_StopWheelCmd()
+ * ----------------------------------------------------
+ */
+CFE_Status_t ACT_APP_StopWheelCmd(const ACT_APP_StopWheelCmd_t *Msg)
+{
+    UT_GenStub_SetupReturnBuffer(ACT_APP_StopWheelCmd, CFE_Status_t);
+    UT_GenStub_AddParam(ACT_APP_StopWheelCmd, const ACT_APP_StopWheelCmd_t *, Msg);
+    UT_GenStub_Execute(ACT_APP_StopWheelCmd, Basic, NULL);
+    return UT_GenStub_GetReturnValue(ACT_APP_StopWheelCmd, CFE_Status_t);
+}

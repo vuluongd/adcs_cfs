@@ -36,7 +36,15 @@ typedef struct ACT_APP_DisplayParam_Payload
 
 /*************************************************************************/
 /*
-** Type definition (Sample App housekeeping)
+** ACT_CMD payload: wheel speed setpoint from ADCS_APP (or ground)
+*/
+typedef struct ACT_APP_SetWheelSpeed_Payload
+{
+    float omega_rad_s; /**< \brief Wheel speed setpoint, rad/s. Sign = direction. Clamped to omega_max by ACT_APP. */
+} ACT_APP_SetWheelSpeed_Payload_t;
+
+/*
+** Type definition (ACT App housekeeping)
 */
 
 typedef struct ACT_APP_HkTlm_Payload
