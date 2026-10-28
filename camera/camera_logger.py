@@ -7,7 +7,7 @@ from pathlib import Path
 from data_logger import DataLogger, IMUData, LightSensorData, ADCSState
 CAMERA_SOURCE = "libcamerasrc ! video/x-raw,width=640,height=480 ! videoconvert ! appsink"
 
-SAVE_DIR = Path("/images")
+SAVE_DIR = Path("images")
 FRAME_WIDTH  = 640
 FRAME_HEIGHT = 480
 CAPTURE_FPS  = 5  
