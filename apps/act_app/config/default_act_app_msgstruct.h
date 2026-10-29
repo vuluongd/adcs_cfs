@@ -67,8 +67,19 @@ typedef struct
 } ACT_APP_DisplayParamCmd_t;
 
 /*************************************************************************/
+typedef struct
+{
+    CFE_MSG_CommandHeader_t         CommandHeader; /**< \brief Command header */
+    ACT_APP_SetWheelSpeed_Payload_t Payload;
+} ACT_APP_SetWheelSpeedCmd_t;
+
+typedef struct
+{
+    CFE_MSG_CommandHeader_t CommandHeader; /**< \brief Command header */
+} ACT_APP_StopWheelCmd_t;
+
 /*
-** Type definition (Sample App housekeeping)
+** Type definition (ACT App housekeeping)
 */
 
 typedef struct

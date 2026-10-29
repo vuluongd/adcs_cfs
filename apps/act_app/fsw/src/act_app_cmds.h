@@ -35,5 +35,7 @@ CFE_Status_t ACT_APP_NoopCmd(const ACT_APP_NoopCmd_t *Msg);
 CFE_Status_t ACT_APP_ResetCountersCmd(const ACT_APP_ResetCountersCmd_t *Msg);
 CFE_Status_t ACT_APP_ProcessCmd(const ACT_APP_ProcessCmd_t *Msg);
 CFE_Status_t ACT_APP_DisplayParamCmd(const ACT_APP_DisplayParamCmd_t *Msg);
+CFE_Status_t ACT_APP_SetWheelSpeedCmd(const ACT_APP_SetWheelSpeedCmd_t *Msg);
+CFE_Status_t ACT_APP_StopWheelCmd(const ACT_APP_StopWheelCmd_t *Msg);
 
 #endif /* ACT_APP_CMDS_H */

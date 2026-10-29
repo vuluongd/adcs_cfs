@@ -1,0 +1,18 @@
+# 
+# act-app-wheel-data-tlm.txt
+# WHEEL_DATA packet definition (MID 0x08E4), see apps/act_app/fsw/inc/act_data.h
+# Offset starts after the Telemetry Header (12 bytes)
+#
+Cmd Omega (rad/s),   12,  4,  f, Dec, NULL, NULL, NULL, NULL
+Target Omega (rad/s),16,  4,  f, Dec, NULL, NULL, NULL, NULL
+Meas Omega (rad/s),  20,  4,  f, Dec, NULL, NULL, NULL, NULL
+PFM (Hz),            24,  4,  f, Dec, NULL, NULL, NULL, NULL
+Sample Counter,      28,  4,  I, Dec, NULL, NULL, NULL, NULL
+Valid,               32,  1,  B, Dec, NULL, NULL, NULL, NULL
+Status,              33,  1,  B, Dec, NULL, NULL, NULL, NULL
+Saturated,           34,  1,  B, Dec, NULL, NULL, NULL, NULL
+Simulated,           35,  1,  B, Dec, NULL, NULL, NULL, NULL
+Enabled,             36,  1,  B, Dec, NULL, NULL, NULL, NULL
+Braking,             37,  1,  B, Dec, NULL, NULL, NULL, NULL
+Direction,           38,  1,  b, Dec, NULL, NULL, NULL, NULL
+Measured,            39,  1,  B, Dec, NULL, NULL, NULL, NULL

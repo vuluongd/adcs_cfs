@@ -18,7 +18,7 @@
 
 /**
  * \file
- *   This file contains the source code for the Sample App.
+ *   This file contains the source code for ACT_APP (reaction wheel actuator).
  */
 
 /*
@@ -30,6 +30,8 @@
 #include "act_app_eventids.h"
 #include "act_app_msgids.h"
 #include "act_app_msg.h"
+#include "act_app_wheel.h"
+#include "act_data.h"
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * **/
 /*                                                                            */
@@ -71,7 +73,7 @@ bool ACT_APP_VerifyCmdLength(const CFE_MSG_Message_t *MsgPtr, size_t ExpectedLen
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * **/
 /*                                                                            */
-/* SAMPLE ground commands                                                     */
+/* ACT_APP ground commands                                                     */
 /*                                                                            */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * **/
 void ACT_APP_ProcessGroundCommand(const CFE_SB_Buffer_t *SBBufPtr)
@@ -81,7 +83,7 @@ void ACT_APP_ProcessGroundCommand(const CFE_SB_Buffer_t *SBBufPtr)
     CFE_MSG_GetFcnCode(&SBBufPtr->Msg, &CommandCode);
 
     /*
-    ** Process SAMPLE app ground commands
+    ** Process ACT_APP ground commands
     */
     switch (CommandCode)
     {
@@ -113,6 +115,20 @@ void ACT_APP_ProcessGroundCommand(const CFE_SB_Buffer_t *SBBufPtr)
             }
             break;
 
+        case ACT_APP_SET_WHEEL_SPEED_CC:
+            if (ACT_APP_VerifyCmdLength(&SBBufPtr->Msg, sizeof(ACT_APP_SetWheelSpeedCmd_t)))
+            {
+                ACT_APP_SetWheelSpeedCmd((const ACT_APP_SetWheelSpeedCmd_t *)SBBufPtr);
+            }
+            break;
+
+        case ACT_APP_STOP_WHEEL_CC:
+            if (ACT_APP_VerifyCmdLength(&SBBufPtr->Msg, sizeof(ACT_APP_StopWheelCmd_t)))
+            {
+                ACT_APP_StopWheelCmd((const ACT_APP_StopWheelCmd_t *)SBBufPtr);
+            }
+            break;
+
         default:
             CFE_EVS_SendEvent(ACT_APP_CC_ERR_EID,
                               CFE_EVS_EventType_ERROR,
@@ -125,7 +141,7 @@ void ACT_APP_ProcessGroundCommand(const CFE_SB_Buffer_t *SBBufPtr)
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * **/
 /*                                                                            */
 /*  Purpose:                                                                  */
-/*     This routine will process any packet that is received on the SAMPLE    */
+/*     This routine will process any packet that is received on the ACT_APP    */
 /*     command pipe.                                                          */
 /*                                                                            */
 /* * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * *  * *  * * * * */
@@ -146,7 +162,15 @@ void ACT_APP_TaskPipe(const CFE_SB_Buffer_t *SBBufPtr)
     CFE_MSG_GetMsgId(&SBBufPtr->Msg, &MsgId);
 
     /* Process all SB messages */
-    if (CFE_SB_MsgId_Equal(MsgId, SEND_HK_MID))
+    if (CFE_SB_MsgId_Equal(MsgId, CFE_SB_ValueToMsgId(ACT_APP_WAKEUP_MID)))
+    {
+        /* WAKEUP_ACT from SCH_LAB (10 Hz) */
+        if (ACT_APP_VerifyCmdLength(&SBBufPtr->Msg, sizeof(ACT_WakeupCmd_t)))
+        {
+            ACT_APP_OnWakeup();
+        }
+    }
+    else if (CFE_SB_MsgId_Equal(MsgId, SEND_HK_MID))
     {
         /* Housekeeping request */
         ACT_APP_SendHkCmd((const ACT_APP_SendHkCmd_t *)SBBufPtr);
@@ -161,7 +185,7 @@ void ACT_APP_TaskPipe(const CFE_SB_Buffer_t *SBBufPtr)
         /* Unknown command */
         CFE_EVS_SendEvent(ACT_APP_MID_ERR_EID,
                           CFE_EVS_EventType_ERROR,
-                          "SAMPLE: invalid command packet,MID = 0x%x",
+                          "ACT_APP: invalid command packet,MID = 0x%x",
                           (unsigned int)CFE_SB_MsgIdToValue(MsgId));
     }
 }

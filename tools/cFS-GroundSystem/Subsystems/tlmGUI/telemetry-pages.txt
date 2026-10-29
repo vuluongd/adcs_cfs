@@ -19,3 +19,4 @@ TIME HK Tlm,               GenericTelemetry.py,     0x805,   cfe-time-hk-tlm.txt
 TIME DIAG Tlm 1,           GenericTelemetry.py,     0x806,   cfe-time-diag-tlm1.txt
 LIGHT DATA Tlm,            GenericTelemetry.py,     0x8DC,   light-app-data-tlm.txt
 IMU DATA Tlm,              GenericTelemetry.py,     0x8D4,   imu-app-data-tlm.txt
+WHEEL DATA Tlm,            GenericTelemetry.py,     0x8E4,   act-app-wheel-data-tlm.txt

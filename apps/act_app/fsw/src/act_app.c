@@ -18,7 +18,7 @@
 
 /**
  * \file
- *   This file contains the source code for the Sample App.
+ *   This file contains the source code for ACT_APP (reaction wheel actuator).
  */
 
 /*
@@ -31,6 +31,7 @@
 #include "act_app_dispatch.h"
 #include "act_app_tbl.h"
 #include "act_app_version.h"
+#include "act_app_wheel.h"
 
 /*
 ** global data
@@ -64,7 +65,7 @@ void ACT_APP_Main(void)
     }
 
     /*
-    ** Sample App Runloop
+    ** ACT_APP Runloop
     */
     while (CFE_ES_RunLoop(&ACT_APP_Data.RunStatus) == true)
     {
@@ -89,7 +90,7 @@ void ACT_APP_Main(void)
         {
             CFE_EVS_SendEvent(ACT_APP_PIPE_ERR_EID,
                               CFE_EVS_EventType_ERROR,
-                              "SAMPLE APP: SB Pipe Read Error, App Will Exit");
+                              "ACT_APP: SB Pipe Read Error, App Will Exit");
 
             ACT_APP_Data.RunStatus = CFE_ES_RunStatus_APP_ERROR;
         }
@@ -99,6 +100,8 @@ void ACT_APP_Main(void)
     ** Performance Log Exit Stamp
     */
     CFE_ES_PerfLogExit(ACT_APP_PERF_ID);
+
+    ACT_APP_WheelClose();
 
     CFE_ES_ExitApp(ACT_APP_Data.RunStatus);
 }
@@ -124,7 +127,7 @@ CFE_Status_t ACT_APP_Init(void)
     status = CFE_EVS_Register(NULL, 0, CFE_EVS_EventFilter_BINARY);
     if (status != CFE_SUCCESS)
     {
-        CFE_ES_WriteToSysLog("Sample App: Error Registering Events, RC = 0x%08lX\n", (unsigned long)status);
+        CFE_ES_WriteToSysLog("ACT_APP: Error Registering Events, RC = 0x%08lX\n", (unsigned long)status);
     }
     else
     {
@@ -145,7 +148,7 @@ CFE_Status_t ACT_APP_Init(void)
         {
             CFE_EVS_SendEvent(ACT_APP_CR_PIPE_ERR_EID,
                               CFE_EVS_EventType_ERROR,
-                              "Sample App: Error creating SB Command Pipe, RC = 0x%08lX",
+                              "ACT_APP: Error creating SB Command Pipe, RC = 0x%08lX",
                               (unsigned long)status);
         }
     }
@@ -160,7 +163,7 @@ CFE_Status_t ACT_APP_Init(void)
         {
             CFE_EVS_SendEvent(ACT_APP_SUB_HK_ERR_EID,
                               CFE_EVS_EventType_ERROR,
-                              "Sample App: Error Subscribing to HK request, RC = 0x%08lX",
+                              "ACT_APP: Error Subscribing to HK request, RC = 0x%08lX",
                               (unsigned long)status);
         }
     }
@@ -175,7 +178,7 @@ CFE_Status_t ACT_APP_Init(void)
         {
             CFE_EVS_SendEvent(ACT_APP_SUB_CMD_ERR_EID,
                               CFE_EVS_EventType_ERROR,
-                              "Sample App: Error Subscribing to Commands, RC = 0x%08lX",
+                              "ACT_APP: Error Subscribing to Commands, RC = 0x%08lX",
                               (unsigned long)status);
         }
     }
@@ -194,7 +197,7 @@ CFE_Status_t ACT_APP_Init(void)
         {
             CFE_EVS_SendEvent(ACT_APP_TABLE_REG_ERR_EID,
                               CFE_EVS_EventType_ERROR,
-                              "Sample App: Error Registering Example Table, RC = 0x%08lX",
+                              "ACT_APP: Error Registering Example Table, RC = 0x%08lX",
                               (unsigned long)status);
         }
         else
@@ -204,15 +207,20 @@ CFE_Status_t ACT_APP_Init(void)
 
         CFE_Config_GetVersionString(VersionString,
                                     ACT_APP_CFG_MAX_VERSION_STR_LEN,
-                                    "Sample App",
+                                    "ACT_APP",
                                     ACT_APP_VERSION,
                                     ACT_APP_BUILD_CODENAME,
                                     ACT_APP_LAST_OFFICIAL);
 
         CFE_EVS_SendEvent(ACT_APP_INIT_INF_EID,
                           CFE_EVS_EventType_INFORMATION,
-                          "Sample App Initialized.%s",
+                          "ACT_APP Initialized.%s",
                           VersionString);
+    }
+
+    if (status == CFE_SUCCESS)
+    {
+        status = ACT_APP_WheelInit();
     }
 
     return status;
