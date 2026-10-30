@@ -195,10 +195,16 @@ make native_std.install
 
 ```bash
 cd ~/adcs_cfs/build-native_std/exe/cpu1
+export ACT_APP_BACKEND=gpio
+export ACT_APP_PWM_DIR=/sys/class/pwm/pwmchip0/pwm0
+export ACT_APP_GPIO_ENABLE=23
+export ACT_APP_GPIO_DIR=24
+export ACT_APP_GPIO_BRAKE=25
 export IMU_APP_BACKEND=i2c
 export IMU_APP_I2C_DEVICE=/dev/i2c-1
 # LIGHT: theo env của light_app nếu có (ví dụ LIGHT_APP_BACKEND=...)
 ./core-cpu1
+
 ```
 
 **Kỳ vọng:**
