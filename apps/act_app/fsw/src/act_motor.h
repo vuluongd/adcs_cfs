@@ -2,10 +2,13 @@
  * act_motor.h - reaction-wheel motor layer for ACT_APP.  No cFS dependency, so it
  * can be built and tested on a PC (tools/act_demo) like light_tracking_core.
  *
- * Target hardware: Nidec 24H055M020 BLDC with integrated driver, controlled by
- *   ENABLE (high = run), BRAKE (low = brake), DIR (high = CCW), and a PFM speed
- *   input where the pulse FREQUENCY (not duty) sets speed, ~150 Hz .. ~25 kHz.
- *   Speed feedback (FG) may or may not be exposed; the layer works without it.
+ * Target hardware: Nidec 24H055M020 BLDC (12 V, 15 W) with integrated driver and
+ *   12-pin connector (project slide 57): 1-2 +12 V, 3-5 GND, 6 TOOL0, 7 RESET,
+ *   8 Status, 9 CW/CCW, 10 BRAKE, 11 Start, 12 PFM.  We drive pins 9/10/11/12 only.
+ *   Speed is set by pulse FREQUENCY on PFM (not duty): 100 Hz .. 25 kHz accepted,
+ *   0.15 rpm/Hz and linear up to 10 kHz (~1500 rpm), flat above that (bench).
+ *   The 100-line encoder is internal to the driver; no A/B lines are on the
+ *   connector, so meas_omega is a model (measured = 0) until pin 8 is characterised.
  *
  * Backends (env ACT_APP_BACKEND):
  *   unset / "sim" : first-order model of the wheel, simulated = 1
@@ -22,8 +25,8 @@ typedef struct
 {
     float omega_max_rad_s;   /* hard clamp on |setpoint|                               */
     float slew_rad_s2;       /* max |d(target)/dt|: the 24H055 dislikes step changes   */
-    float pfm_min_hz;        /* below this the Nidec does not start                    */
-    float pfm_max_hz;        /* above this it self-shuts; stay well under 15 kHz       */
+    float pfm_min_hz;        /* below this the Nidec does not start (bench: 100 Hz)    */
+    float pfm_max_hz;        /* top of the linear rpm/Hz region (bench: 10 kHz)        */
     float rad_s_per_hz;      /* open-loop map omega = rad_s_per_hz * pfm_hz (bench)    */
     float sim_tau_s;         /* simulated wheel time constant                          */
     float stop_threshold;    /* |target| below this => brake and drop ENABLE           */
