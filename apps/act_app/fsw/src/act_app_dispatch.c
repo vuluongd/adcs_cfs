@@ -128,6 +128,12 @@ void ACT_APP_ProcessGroundCommand(const CFE_SB_Buffer_t *SBBufPtr)
                 ACT_APP_StopWheelCmd((const ACT_APP_StopWheelCmd_t *)SBBufPtr);
             }
             break;
+        case ACT_APP_SET_CONTROL_MODE_CC:
+            if (ACT_APP_VerifyCmdLength(&SBBufPtr->Msg, sizeof(ACT_APP_SetControlModeCmd_t)))
+            {
+                ACT_APP_SetControlModeCmd((const ACT_APP_SetControlModeCmd_t *)SBBufPtr);
+            }
+            break;
 
         default:
             CFE_EVS_SendEvent(ACT_APP_CC_ERR_EID,

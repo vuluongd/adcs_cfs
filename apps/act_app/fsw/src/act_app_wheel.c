@@ -66,6 +66,11 @@ uint8 ACT_APP_WheelSetSpeed(float omega)
     return ACT_MotorSetTarget(&Motor, omega);
 }
 
+uint8 ACT_APP_WheelSetMode(uint8 use_pi)
+{
+    return ACT_MotorSetMode(&Motor, use_pi);
+}
+
 void ACT_APP_WheelStop(void)
 {
     ACT_MotorStop(&Motor);
@@ -97,6 +102,7 @@ void ACT_APP_OnWakeup(void)
     p->braking            = s->braking;
     p->direction          = s->direction;
     p->measured           = s->measured;
+    p->control_mode       = (Motor.cfg.use_pi && s->measured) ? 1 : 0;
 
     if (s->status != LastStatus &&
         (s->status == ACT_STATUS_IO_ERROR || s->status == ACT_STATUS_BAD_INPUT || s->status == ACT_STATUS_FAULT))
@@ -109,10 +115,11 @@ void ACT_APP_OnWakeup(void)
 
     if (Counter == 1 || Counter % ACT_APP_WHEEL_PRINT_EVERY == 0)
     {
-        printf(">>> ACT [%u] cmd=%.1f tgt=%.1f meas=%.1f rad/s pfm=%.0f Hz dir=%d en=%d brk=%d sat=%d valid=%d status=%d sim=%d\n",
+        printf(">>> ACT [%u] cmd=%.1f tgt=%.1f meas=%.1f rad/s pfm=%.0f Hz dir=%d en=%d brk=%d sat=%d valid=%d status=%d sim=%d mode=%d\n",
                (unsigned int)p->sample_counter, (double)p->cmd_omega_rad_s, (double)p->target_omega_rad_s,
                (double)p->meas_omega_rad_s, (double)p->pfm_hz, (int)p->direction, (int)p->enabled,
-               (int)p->braking, (int)p->saturated, (int)p->valid, (int)p->status, (int)p->simulated);
+               (int)p->braking, (int)p->saturated, (int)p->valid, (int)p->status, (int)p->simulated,
+               (int)p->control_mode);
     }
 
     CFE_SB_TimeStampMsg(CFE_MSG_PTR(Tlm.TelemetryHeader));
@@ -122,8 +129,8 @@ void ACT_APP_OnWakeup(void)
         CFE_EVS_SendEvent(ACT_APP_WHEEL_TX_ERR_EID, CFE_EVS_EventType_ERROR, "WHEEL_DATA transmit failed: %ld", (long)tx);
     }
 }
-
 void ACT_APP_WheelClose(void)
 {
     ACT_MotorClose(&Motor);
 }
+

@@ -10,3 +10,4 @@ void         ACT_APP_OnWakeup(void) {}
 void         ACT_APP_WheelClose(void) {}
 uint8        ACT_APP_WheelSetSpeed(float omega) { (void)omega; return 0; }
 void         ACT_APP_WheelStop(void) {}
+uint8        ACT_APP_WheelSetMode(uint8 use_pi) { (void)use_pi; return 0; }

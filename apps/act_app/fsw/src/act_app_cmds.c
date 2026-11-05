@@ -149,6 +149,23 @@ CFE_Status_t ACT_APP_ProcessCmd(const ACT_APP_ProcessCmd_t *Msg)
 
     return Status;
 }
+CFE_Status_t ACT_APP_SetControlModeCmd(const ACT_APP_SetControlModeCmd_t *Msg)
+{
+    uint8 st = (Msg->Payload.Mode > 1u) ? ACT_STATUS_BAD_INPUT
+                                        : ACT_APP_WheelSetMode((uint8)Msg->Payload.Mode);
+    if (st != ACT_STATUS_OK)
+    {
+        ACT_APP_Data.CommandErrorCounter++;
+        CFE_EVS_SendEvent(ACT_APP_CMD_LEN_ERR_EID, CFE_EVS_EventType_ERROR,
+                          "ACT_APP: SET_CONTROL_MODE %lu rejected (mode must be 0/1, PI needs encoder data)",
+                          (unsigned long)Msg->Payload.Mode);
+        return CFE_STATUS_RANGE_ERROR;
+    }
+    ACT_APP_Data.CommandCounter++;
+    CFE_EVS_SendEvent(ACT_APP_VALUE_INF_EID, CFE_EVS_EventType_INFORMATION,
+                      "ACT_APP: control mode = %s", Msg->Payload.Mode ? "PI" : "OPEN-LOOP");
+    return CFE_SUCCESS;
+}
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * **/
 /*                                                                            */

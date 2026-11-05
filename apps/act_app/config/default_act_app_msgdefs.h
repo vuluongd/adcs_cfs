@@ -38,6 +38,10 @@ typedef struct ACT_APP_DisplayParam_Payload
 /*
 ** ACT_CMD payload: wheel speed setpoint from ADCS_APP (or ground)
 */
+typedef struct ACT_APP_SetControlMode_Payload
+{
+    uint32 Mode; /**< \brief 0 = open-loop, 1 = PI (cần số liệu encoder) */
+} ACT_APP_SetControlMode_Payload_t;
 typedef struct ACT_APP_SetWheelSpeed_Payload
 {
     float omega_rad_s; /**< \brief Wheel speed setpoint, rad/s. Sign = direction. Clamped to omega_max by ACT_APP. */

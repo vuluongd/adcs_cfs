@@ -1,17 +1,3 @@
-/*
- * act_motor.h - reaction-wheel motor layer for ACT_APP.  No cFS dependency, so it
- * can be built and tested on a PC (tools/act_demo) like light_tracking_core.
- *
- * Target hardware: Nidec 24H055M020 BLDC with integrated driver, controlled by
- *   ENABLE (high = run), BRAKE (low = brake), DIR (high = CCW), and a PFM speed
- *   input where the pulse FREQUENCY (not duty) sets speed, ~150 Hz .. ~25 kHz.
- *   Speed feedback (FG) may or may not be exposed; the layer works without it.
- *
- * Backends (env ACT_APP_BACKEND):
- *   unset / "sim" : first-order model of the wheel, simulated = 1
- *   "gpio"        : Raspberry Pi hardware PWM (variable period, 50 % duty) + GPIOs
- *   anything else : BAD_INPUT, never silently simulates (same rule as IMU/LIGHT)
- */
 #ifndef ACT_MOTOR_H
 #define ACT_MOTOR_H
 
@@ -31,9 +17,9 @@ typedef struct
     float   kp;
     float   ki;
     float   integral_max;
-    uint8_t use_encoder;   /* 1 = đọc encoder thật           */
-    float   enc_counts_per_rev; /* 100 (x1) hoặc 400 (x4)    */
-    float   enc_lpf_alpha;      /* 0.2..0.5, lọc tốc độ      */
+    uint8_t use_encoder;        /* 1 = đọc encoder thật        */
+    float   enc_counts_per_rev; /* 100 (x1) hoặc 400 (x4)      */
+    float   enc_lpf_alpha;      /* 0.2..0.5, lọc tốc độ        */
 } ACT_MotorConfig_t;
 
 typedef struct
@@ -49,12 +35,6 @@ typedef struct
     uint8_t braking;
     int8_t  direction;       /* +1 CCW, -1 CW, 0 stopped                               */
     uint8_t measured;        /* 1 = meas_omega came from FG                            */
-    int      enc_fd;
-    uint32_t enc_last_count;
-    uint8_t  enc_have_last;
-    uint8_t  enc_stale;      /* số chu kỳ liên tiếp không có frame mới */
-    float    enc_dt_acc;     /* thời gian cộng dồn kể từ frame trước   */
-    float    omega_filt;
 } ACT_MotorState_t;
 
 typedef struct
@@ -69,7 +49,14 @@ typedef struct
     int               gpio_ready;
     /* sim backend state */
     float             sim_omega;
-    float integral;
+    float             integral;
+    /* encoder (UART từ RL78) */
+    int               enc_fd;
+    uint32_t          enc_last_count;
+    uint8_t           enc_have_last;
+    uint8_t           enc_stale;     /* số chu kỳ liên tiếp không có frame mới */
+    float             enc_dt_acc;    /* thời gian cộng dồn kể từ frame trước   */
+    float             omega_filt;
 } ACT_Motor_t;
 
 void    ACT_MotorDefaultConfig(ACT_MotorConfig_t *cfg);
@@ -78,5 +65,6 @@ void    ACT_MotorClose(ACT_Motor_t *m);                              /* brake, d
 uint8_t ACT_MotorSetTarget(ACT_Motor_t *m, float omega_rad_s);       /* ACT_STATUS_* */
 void    ACT_MotorStop(ACT_Motor_t *m);                               /* setpoint 0, brake when slow */
 uint8_t ACT_MotorStep(ACT_Motor_t *m, float dt_s);                   /* call every wakeup */
+uint8_t ACT_MotorSetMode(ACT_Motor_t *m, uint8_t use_pi);            /* 0 = open-loop, 1 = PI */
 
 #endif /* ACT_MOTOR_H */

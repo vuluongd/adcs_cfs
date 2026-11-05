@@ -93,4 +93,10 @@ typedef struct
     ACT_APP_HkTlm_Payload_t Payload;         /**< \brief Telemetry payload */
 } ACT_APP_HkTlm_t;
 
+typedef struct
+{
+    CFE_MSG_CommandHeader_t          CommandHeader;
+    ACT_APP_SetControlMode_Payload_t Payload;
+} ACT_APP_SetControlModeCmd_t;
+
 #endif /* ACT_APP_MSGSTRUCT_H */

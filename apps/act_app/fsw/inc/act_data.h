@@ -27,6 +27,8 @@ typedef struct
     uint8  braking;            /* off 25 1 = BRAKE line asserted                             */
     int8   direction;          /* off 26 +1 CCW, -1 CW, 0 stopped (driver DIR convention)    */
     uint8  measured;           /* off 27 1 = meas_omega from FG pulses, 0 = open-loop model  */
+    uint8  control_mode;   /* off 28: 0 = open-loop, 1 = PI đang chạy thật */
+    uint8  spare[3];
 } ACT_WheelDataPayload_t;      /* 28 bytes */
 
 typedef struct

@@ -130,3 +130,15 @@ CFE_Status_t ACT_APP_StopWheelCmd(const ACT_APP_StopWheelCmd_t *Msg)
     UT_GenStub_Execute(ACT_APP_StopWheelCmd, Basic, NULL);
     return UT_GenStub_GetReturnValue(ACT_APP_StopWheelCmd, CFE_Status_t);
 }
+/*
+ * ----------------------------------------------------
+ * Generated stub function for ACT_APP_SetControlModeCmd()
+ * ----------------------------------------------------
+ */
+CFE_Status_t ACT_APP_SetControlModeCmd(const ACT_APP_SetControlModeCmd_t *Msg)
+{
+    UT_GenStub_SetupReturnBuffer(ACT_APP_SetControlModeCmd, CFE_Status_t);
+    UT_GenStub_AddParam(ACT_APP_SetControlModeCmd, const ACT_APP_SetControlModeCmd_t *, Msg);
+    UT_GenStub_Execute(ACT_APP_SetControlModeCmd, Basic, NULL);
+    return UT_GenStub_GetReturnValue(ACT_APP_SetControlModeCmd, CFE_Status_t);
+}

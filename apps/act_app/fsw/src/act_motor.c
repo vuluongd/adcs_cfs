@@ -391,3 +391,11 @@ uint8_t ACT_MotorStep(ACT_Motor_t *m, float dt_s)
     s->status = s->saturated ? ACT_STATUS_SATURATED : ACT_STATUS_OK;
     return s->status;
 }
+uint8_t ACT_MotorSetMode(ACT_Motor_t *m, uint8_t use_pi)
+{
+    if (use_pi > 1u) return ACT_STATUS_BAD_INPUT;
+    if (use_pi == 1u && !m->st.measured) return ACT_STATUS_BAD_INPUT; /* chưa có encoder thật */
+    m->cfg.use_pi = use_pi;
+    m->integral   = 0.0f;   /* đổi chế độ thì xóa tích phân */
+    return ACT_STATUS_OK;
+}
