@@ -28,12 +28,12 @@ void ACT_MotorDefaultConfig(ACT_MotorConfig_t *cfg)
         .pfm_max_hz      = 10000.0f,/* forum: self-shutdown above ~15 kHz, keep margin  */
         .rad_s_per_hz    = 0.03f,   /* TODO bench: 10 kHz -> 300 rad/s is a GUESS       */
         .sim_tau_s       = 0.8f,
-        .stop_threshold  = 2.0f     /* rad/s                                            */
+        .stop_threshold  = 2.0f,    /* rad/s                                            */
         /*PI gain*/
         .use_pi = 0, /* 0 = open-loop (mặc định), 1 = PI*/
         .kp              = 15.0f,
         .ki              = 8.0f ,
-        integral_max    = 2000.0f
+        .integral_max    = 2000.0f
     };
 }
 
@@ -255,7 +255,21 @@ uint8_t ACT_MotorStep(ACT_Motor_t *m, float dt_s)
 
     else
     {
-        if (c>use_pi) {
+        if (c->use_pi) {
+            float ff = drive_omega / c->rad_s_per_hz;
+            float error = drive_omega - fabsf(s->meas_omega);
+
+            float pfm_unsat = ff + c->kp * error + m->integral;
+
+            /* Anti-windup đơn giản */
+            if (pfm_unsat > c->pfm_min_hz && pfm_unsat < c->pfm_max_hz)
+            {
+                m->integral += c->ki * error * dt_s;
+            }
+            if (m->integral >  c->integral_max) m->integral =  c->integral_max;
+            if (m->integral < -c->integral_max) m->integral = -c->integral_max;
+
+            s->pfm_hz = ff + c->kp * error + m->integral;      
 
         }
         else
