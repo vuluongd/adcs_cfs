@@ -6,8 +6,11 @@
  * sleeps or blocks: the cFS wakeup handler calls ACT_MotorStep() at 10 Hz.
  */
 #define _POSIX_C_SOURCE 200809L
+#define _DEFAULT_SOURCE 1
+#include <errno.h>
 #include "act_motor.h"
-
+#include <termios.h>
+#include <stdint.h>
 #include <fcntl.h>
 #include <math.h>
 #include <stdio.h>
@@ -33,7 +36,10 @@ void ACT_MotorDefaultConfig(ACT_MotorConfig_t *cfg)
         .use_pi = 0, /* 0 = open-loop (mặc định), 1 = PI*/
         .kp              = 15.0f,
         .ki              = 8.0f ,
-        .integral_max    = 2000.0f
+        .integral_max    = 2000.0f,
+        .use_encoder        = 0,       /* bật sau khi RL78 chạy ổn */
+        .enc_counts_per_rev = 100.0f,
+        .enc_lpf_alpha      = 0.3f
     };
 }
 
@@ -48,7 +54,9 @@ static int ACT_ConfigValid(const ACT_MotorConfig_t *c)
            isfinite(c->stop_threshold) && c->stop_threshold >= 0.0f &&
            isfinite(c->kp) && c->kp >= 0.0f &&
            isfinite(c->ki) && c->ki >= 0.0f &&
-           isfinite(c->integral_max) && c->integral_max > 0.0f;
+           isfinite(c->integral_max) && c->integral_max > 0.0f && 
+           isfinite(c->enc_counts_per_rev) && c->enc_counts_per_rev > 0.0f &&
+           isfinite(c->enc_lpf_alpha) && c->enc_lpf_alpha > 0.0f && c->enc_lpf_alpha <= 1.0f;
 }
 
 /* ------------------------------------------------------------------------- */
@@ -139,12 +147,78 @@ static int ACT_GpioApply(ACT_Motor_t *m)
 }
 
 /* ------------------------------------------------------------------------- */
+static int ACT_EncOpen(ACT_Motor_t *m)
+{
+    struct termios t;
+    m->enc_fd = open(ACT_Env("ACT_APP_ENC_DEV", "/dev/serial0"),
+                     O_RDONLY | O_NOCTTY | O_NONBLOCK | O_CLOEXEC);
+    if (m->enc_fd < 0) return -1;
+    if (tcgetattr(m->enc_fd, &t) != 0) { close(m->enc_fd); m->enc_fd = -1; return -1; }
+    cfmakeraw(&t);
+    cfsetispeed(&t, B115200);
+    t.c_cc[VMIN] = 0; t.c_cc[VTIME] = 0;
+    if (tcsetattr(m->enc_fd, TCSANOW, &t) != 0) { close(m->enc_fd); m->enc_fd = -1; return -1; }
+    return 0;
+}
+
+/* Trả về 1 = có số đếm mới, 0 = chưa có frame mới, -1 = lỗi I/O */
+static int ACT_EncRead(ACT_Motor_t *m, uint32_t *count)
+{
+    uint8_t buf[128];
+    int     got = 0;
+    ssize_t n;
+
+    while ((n = read(m->enc_fd, buf, sizeof(buf))) > 0)   /* đọc hết hàng đợi, lấy frame mới nhất */
+    {
+        for (ssize_t i = n - 6; i >= 0; i--)
+        {
+            if (buf[i] == 0xA5 &&
+                (uint8_t)(buf[i] ^ buf[i+1] ^ buf[i+2] ^ buf[i+3] ^ buf[i+4]) == buf[i+5])
+            {
+                *count = (uint32_t)buf[i+1] | ((uint32_t)buf[i+2] << 8) |
+                         ((uint32_t)buf[i+3] << 16) | ((uint32_t)buf[i+4] << 24);
+                got = 1;
+                break;
+            }
+        }
+    }
+    if (n < 0 && errno != EAGAIN && errno != EWOULDBLOCK) return -1;
+    return got;
+}
+
+static int ACT_EncUpdate(ACT_Motor_t *m, float dt_s)
+{
+    uint32_t cnt = 0;
+    int      r   = ACT_EncRead(m, &cnt);
+
+    if (r < 0) return -1;
+    m->enc_dt_acc += dt_s;
+    if (r == 0) return (m->enc_have_last && ++m->enc_stale <= 5) ? 0 : -1;   /* quá 0.5 s không có frame => coi như mất */
+    m->enc_stale = 0;
+
+    if (!m->enc_have_last)
+    {
+        m->enc_last_count = cnt; m->enc_have_last = 1; m->enc_dt_acc = 0.0f;
+        return -1;
+    }
+    if (m->enc_dt_acc > 0.0f)
+    {
+        int32_t delta = (int32_t)(cnt - m->enc_last_count);      /* chịu được tràn số */
+        float   w     = 6.2831853f * (float)delta / (m->cfg.enc_counts_per_rev * m->enc_dt_acc);
+        if (m->st.direction < 0) w = -w;                          /* encoder 1 kênh: lấy dấu từ lệnh */
+        m->omega_filt += m->cfg.enc_lpf_alpha * (w - m->omega_filt);
+    }
+    m->enc_last_count = cnt;
+    m->enc_dt_acc     = 0.0f;
+    return 0;
+}
 void ACT_MotorInit(ACT_Motor_t *m, const ACT_MotorConfig_t *cfg)
 {
     const char *backend = getenv("ACT_APP_BACKEND");
 
     memset(m, 0, sizeof(*m));
     m->pwm_fd_period = m->pwm_fd_duty = -1;
+    m->enc_fd = -1;
     if (cfg != NULL) m->cfg = *cfg; else ACT_MotorDefaultConfig(&m->cfg);
 
     /* Unknown backend is treated as hardware so it fails loudly, never silently simulates. */
@@ -168,6 +242,8 @@ void ACT_MotorClose(ACT_Motor_t *m)
     if (m->pwm_fd_period >= 0) close(m->pwm_fd_period);
     if (m->pwm_fd_duty >= 0) close(m->pwm_fd_duty);
     m->pwm_fd_period = m->pwm_fd_duty = -1;
+    if (m->enc_fd >= 0) close(m->enc_fd);
+    m->enc_fd = -1;
     m->gpio_ready = 0;
 }
 
@@ -220,6 +296,17 @@ uint8_t ACT_MotorStep(ACT_Motor_t *m, float dt_s)
         s->status = ACT_STATUS_NOT_READY;
         return s->status; /* first real output on the next wakeup, like the sensor apps */
     }
+    /* --- encoder: đo tốc độ thật trước khi điều khiển --- */
+    if (c->use_encoder && m->hardware)
+    {
+        if (m->enc_fd < 0) (void)ACT_EncOpen(m);
+        s->measured = (m->enc_fd >= 0 && ACT_EncUpdate(m, dt_s) == 0) ? 1 : 0;
+        if (s->measured) s->meas_omega = m->omega_filt;
+    }
+    else
+    {
+        s->measured = 0;
+    }
 
     /* --- direction handling: never flip DIR at speed; go through zero first --- */
     desired_dir = (s->cmd_omega > c->stop_threshold) ? 1 : (s->cmd_omega < -c->stop_threshold) ? -1 : 0;
@@ -255,22 +342,20 @@ uint8_t ACT_MotorStep(ACT_Motor_t *m, float dt_s)
 
     else
     {
-        if (c->use_pi) {
+        if (c->use_pi && s->measured) {
             float ff = drive_omega / c->rad_s_per_hz;
             float error = drive_omega - fabsf(s->meas_omega);
-
-            float pfm_unsat = ff + c->kp * error + m->integral;
+            float u     = ff + c->kp * error + m->integral;
+            int   sat_hi = (u >= c->pfm_max_hz);
+            int   sat_lo = (u <= c->pfm_min_hz);
 
             /* Anti-windup đơn giản */
-            if (pfm_unsat > c->pfm_min_hz && pfm_unsat < c->pfm_max_hz)
-            {
+            if (!((sat_hi && error > 0.0f) || (sat_lo && error < 0.0f)))
                 m->integral += c->ki * error * dt_s;
-            }
             if (m->integral >  c->integral_max) m->integral =  c->integral_max;
             if (m->integral < -c->integral_max) m->integral = -c->integral_max;
 
-            s->pfm_hz = ff + c->kp * error + m->integral;      
-
+            s->pfm_hz = ff + c->kp * error + m->integral;
         }
         else
         {
@@ -284,15 +369,18 @@ uint8_t ACT_MotorStep(ACT_Motor_t *m, float dt_s)
     }
 
     /* --- plant: measured if FG exists (TODO), otherwise first-order model --- */
+    if (s->measured)
+    {
+        m->sim_omega = s->meas_omega;
+    }
+    else
     {
         float model_goal = s->enabled ? (float)s->direction * s->pfm_hz * c->rad_s_per_hz : 0.0f;
         float tau        = s->braking ? c->sim_tau_s * 0.25f : c->sim_tau_s;
         float a          = (dt_s > 0.0f) ? dt_s / (tau + dt_s) : 0.0f;
         m->sim_omega += a * (model_goal - m->sim_omega);
         s->meas_omega = m->sim_omega;
-        s->measured   = 0;
     }
-
     if (m->hardware && ACT_GpioApply(m) != 0)
     {
         s->status = ACT_STATUS_IO_ERROR;
@@ -303,4 +391,3 @@ uint8_t ACT_MotorStep(ACT_Motor_t *m, float dt_s)
     s->status = s->saturated ? ACT_STATUS_SATURATED : ACT_STATUS_OK;
     return s->status;
 }
-unit8_t ACT_

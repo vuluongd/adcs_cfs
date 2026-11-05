@@ -31,6 +31,9 @@ typedef struct
     float   kp;
     float   ki;
     float   integral_max;
+    uint8_t use_encoder;   /* 1 = đọc encoder thật           */
+    float   enc_counts_per_rev; /* 100 (x1) hoặc 400 (x4)    */
+    float   enc_lpf_alpha;      /* 0.2..0.5, lọc tốc độ      */
 } ACT_MotorConfig_t;
 
 typedef struct
@@ -46,6 +49,12 @@ typedef struct
     uint8_t braking;
     int8_t  direction;       /* +1 CCW, -1 CW, 0 stopped                               */
     uint8_t measured;        /* 1 = meas_omega came from FG                            */
+    int      enc_fd;
+    uint32_t enc_last_count;
+    uint8_t  enc_have_last;
+    uint8_t  enc_stale;      /* số chu kỳ liên tiếp không có frame mới */
+    float    enc_dt_acc;     /* thời gian cộng dồn kể từ frame trước   */
+    float    omega_filt;
 } ACT_MotorState_t;
 
 typedef struct
