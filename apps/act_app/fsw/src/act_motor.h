@@ -27,6 +27,10 @@ typedef struct
     float rad_s_per_hz;      /* open-loop map omega = rad_s_per_hz * pfm_hz (bench)    */
     float sim_tau_s;         /* simulated wheel time constant                          */
     float stop_threshold;    /* |target| below this => brake and drop ENABLE           */
+    uint8_t use_pi;          /* 0 = open-loop, 1 = PI + Feedforward */
+    float   kp;
+    float   ki;
+    float   integral_max;
 } ACT_MotorConfig_t;
 
 typedef struct
@@ -56,6 +60,7 @@ typedef struct
     int               gpio_ready;
     /* sim backend state */
     float             sim_omega;
+    float integral;
 } ACT_Motor_t;
 
 void    ACT_MotorDefaultConfig(ACT_MotorConfig_t *cfg);
