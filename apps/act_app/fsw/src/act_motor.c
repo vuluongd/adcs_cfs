@@ -29,6 +29,11 @@ void ACT_MotorDefaultConfig(ACT_MotorConfig_t *cfg)
         .rad_s_per_hz    = 0.03f,   /* TODO bench: 10 kHz -> 300 rad/s is a GUESS       */
         .sim_tau_s       = 0.8f,
         .stop_threshold  = 2.0f     /* rad/s                                            */
+        /*PI gain*/
+        .use_pi = 0, /* 0 = open-loop (mặc định), 1 = PI*/
+        .kp              = 15.0f,
+        .ki              = 8.0f ,
+        integral_max    = 2000.0f
     };
 }
 
@@ -40,7 +45,10 @@ static int ACT_ConfigValid(const ACT_MotorConfig_t *c)
            isfinite(c->pfm_max_hz) && c->pfm_max_hz > c->pfm_min_hz &&
            isfinite(c->rad_s_per_hz) && c->rad_s_per_hz > 0.0f &&
            isfinite(c->sim_tau_s) && c->sim_tau_s > 0.0f &&
-           isfinite(c->stop_threshold) && c->stop_threshold >= 0.0f;
+           isfinite(c->stop_threshold) && c->stop_threshold >= 0.0f &&
+           isfinite(c->kp) && c->kp >= 0.0f &&
+           isfinite(c->ki) && c->ki >= 0.0f &&
+           isfinite(c->integral_max) && c->integral_max > 0.0f;
 }
 
 /* ------------------------------------------------------------------------- */
@@ -242,10 +250,19 @@ uint8_t ACT_MotorStep(ACT_Motor_t *m, float dt_s)
         s->pfm_hz  = 0.0f;
         s->enabled = 0;
         s->braking = 1;
+        m->integral = 0.0f;
     }
+
     else
     {
-        s->pfm_hz = drive_omega / c->rad_s_per_hz;
+        if (c>use_pi) {
+
+        }
+        else
+        {
+            s->pfm_hz = drive_omega / c->rad_s_per_hz;
+            m->integral = 0.0f;
+        }
         if (s->pfm_hz < c->pfm_min_hz) s->pfm_hz = c->pfm_min_hz;
         if (s->pfm_hz > c->pfm_max_hz) s->pfm_hz = c->pfm_max_hz;
         s->enabled = 1;
@@ -272,3 +289,4 @@ uint8_t ACT_MotorStep(ACT_Motor_t *m, float dt_s)
     s->status = s->saturated ? ACT_STATUS_SATURATED : ACT_STATUS_OK;
     return s->status;
 }
+unit8_t ACT_
