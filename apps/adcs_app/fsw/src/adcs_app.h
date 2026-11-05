@@ -38,6 +38,9 @@
 #include "adcs_app_msgids.h"
 #include "adcs_app_msg.h"
 #include "light_data.h"
+#include "imu_data.h"
+#include "act_data.h"
+#include "adcs_app_control.h"
 
 /************************************************************************
 ** Type Definitions
@@ -62,6 +65,28 @@ typedef struct
     LIGHT_DataPayload_t Light;
     CFE_TIME_SysTime_t LightTimestamp;
     bool LightReceived;
+
+    IMU_DataPayload_t  Imu;
+    CFE_TIME_SysTime_t ImuTimestamp;
+    bool               ImuReceived;
+
+    ACT_WheelDataPayload_t Wheel; /* monitoring only */
+    bool                   WheelReceived;
+
+    /*
+    ** Outer-loop P controller
+    */
+    uint8               Mode;           /* 0 = DISABLED (default, safe), 1 = TRACKING */
+    uint8               AllowSimulated; /* 1 = accept simulated IMU/Light data        */
+    bool                ImuOk;          /* result of ADCS_APP_ImuUsable() this tick   */
+    bool                LightOk;        /* result of ADCS_APP_LightUsable() this tick */
+    ADCS_Ctrl_Params_t  Params;
+    ADCS_Ctrl_Mem_t     CtrlMem;
+    ADCS_Ctrl_Out_t     CtrlOut;
+    float               LastOmegaSent;
+    uint32              TicksSinceSend;
+    CFE_TIME_SysTime_t  LastTick;
+    bool                HaveLastTick;
 
     /*
     ** Run Status variable used in the main processing loop

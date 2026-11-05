@@ -32,6 +32,11 @@
 #include "adcs_app_tbl.h"
 #include "adcs_app_version.h"
 #include "light_app_msgids.h"
+#include "imu_app_msgids.h"
+#include "act_app_msgids.h"
+#include "adcs_app_imu.h"
+#include "adcs_app_light.h"
+#include "adcs_app_loop.h"
 
 /*
 ** global data
@@ -100,6 +105,9 @@ void ADCS_APP_Main(void)
     ** Performance Log Exit Stamp
     */
     CFE_ES_PerfLogExit(ADCS_APP_PERF_ID);
+
+    /* Never leave the flywheel spinning on a command from a dead controller. */
+    ADCS_APP_StopWheel();
 
     CFE_ES_ExitApp(ADCS_APP_Data.RunStatus);
 }
@@ -216,9 +224,36 @@ CFE_Status_t ADCS_APP_Init(void)
                           VersionString);
     }
 
+    /* Control-loop inputs: wakeup (10 Hz) + sensor data + wheel monitoring */
     if (status == CFE_SUCCESS)
     {
-        status = CFE_SB_Subscribe(CFE_SB_ValueToMsgId(LIGHT_APP_DATA_MID), ADCS_APP_Data.CommandPipe);
+        static const struct
+        {
+            uint32      mid;
+            const char *name;
+        } subs[] = {{ADCS_APP_WAKEUP_MID, "WAKEUP_ADCS"},
+                    {IMU_APP_DATA_MID, "IMU_DATA"},
+                    {LIGHT_APP_DATA_MID, "LIGHT_DATA"},
+                    {ACT_APP_DATA_MID, "WHEEL_DATA"}};
+        size_t i;
+
+        for (i = 0; i < sizeof(subs) / sizeof(subs[0]) && status == CFE_SUCCESS; i++)
+        {
+            status = CFE_SB_Subscribe(CFE_SB_ValueToMsgId(subs[i].mid), ADCS_APP_Data.CommandPipe);
+            if (status != CFE_SUCCESS)
+            {
+                CFE_EVS_SendEvent(ADCS_APP_SUB_ERR_EID, CFE_EVS_EventType_ERROR,
+                                  "ADCS: error subscribing to %s, RC = 0x%08lX", subs[i].name, (unsigned long)status);
+            }
+        }
+    }
+
+    if (status == CFE_SUCCESS)
+    {
+        ADCS_Ctrl_DefaultParams(&ADCS_APP_Data.Params);
+        ADCS_Ctrl_Reset(&ADCS_APP_Data.CtrlMem);
+        ADCS_APP_Data.Mode           = 0; /* DISABLED until commanded: a spinning flywheel is not started silently */
+        ADCS_APP_Data.AllowSimulated = 0;
     }
     return status;
 }

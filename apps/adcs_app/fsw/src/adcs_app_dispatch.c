@@ -32,6 +32,10 @@
 #include "adcs_app_msg.h"
 #include "light_app_msgids.h"
 #include "adcs_app_light.h"
+#include "adcs_app_imu.h"
+#include "adcs_app_loop.h"
+#include "imu_app_msgids.h"
+#include "act_app_msgids.h"
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * **/
 /*                                                                            */
@@ -108,6 +112,20 @@ void ADCS_APP_ProcessGroundCommand(const CFE_SB_Buffer_t *SBBufPtr)
             }
             break;
 
+        case ADCS_APP_SET_MODE_CC:
+            if (ADCS_APP_VerifyCmdLength(&SBBufPtr->Msg, sizeof(ADCS_APP_SetModeCmd_t)))
+            {
+                ADCS_APP_SetModeCmd((const ADCS_APP_SetModeCmd_t *)SBBufPtr);
+            }
+            break;
+
+        case ADCS_APP_SET_PARAMS_CC:
+            if (ADCS_APP_VerifyCmdLength(&SBBufPtr->Msg, sizeof(ADCS_APP_SetParamsCmd_t)))
+            {
+                ADCS_APP_SetParamsCmd((const ADCS_APP_SetParamsCmd_t *)SBBufPtr);
+            }
+            break;
+
         case ADCS_APP_DISPLAY_PARAM_CC:
             if (ADCS_APP_VerifyCmdLength(&SBBufPtr->Msg, sizeof(ADCS_APP_DisplayParamCmd_t)))
             {
@@ -148,9 +166,22 @@ void ADCS_APP_TaskPipe(const CFE_SB_Buffer_t *SBBufPtr)
     CFE_MSG_GetMsgId(&SBBufPtr->Msg, &MsgId);
 
     /* Process all SB messages */
-    if (CFE_SB_MsgId_Equal(MsgId, CFE_SB_ValueToMsgId(LIGHT_APP_DATA_MID)))
+    if (CFE_SB_MsgId_Equal(MsgId, CFE_SB_ValueToMsgId(ADCS_APP_WAKEUP_MID)))
+    {
+        /* 10 Hz control tick */
+        ADCS_APP_OnWakeup();
+    }
+    else if (CFE_SB_MsgId_Equal(MsgId, CFE_SB_ValueToMsgId(LIGHT_APP_DATA_MID)))
     {
         ADCS_APP_ReceiveLight(SBBufPtr);
+    }
+    else if (CFE_SB_MsgId_Equal(MsgId, CFE_SB_ValueToMsgId(IMU_APP_DATA_MID)))
+    {
+        ADCS_APP_ReceiveImu(SBBufPtr);
+    }
+    else if (CFE_SB_MsgId_Equal(MsgId, CFE_SB_ValueToMsgId(ACT_APP_DATA_MID)))
+    {
+        ADCS_APP_ReceiveWheel(SBBufPtr);
     }
     else if (CFE_SB_MsgId_Equal(MsgId, SEND_HK_MID))
     {

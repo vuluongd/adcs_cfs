@@ -40,6 +40,8 @@ enum ADCS_APP_FunctionCode_
     ADCS_APP_FunctionCode_RESET_COUNTERS = 1,
     ADCS_APP_FunctionCode_PROCESS        = 2,
     ADCS_APP_FunctionCode_DISPLAY_PARAM  = 3,
+    ADCS_APP_FunctionCode_SET_MODE       = 4,
+    ADCS_APP_FunctionCode_SET_PARAMS     = 5,
 };
 
 #endif

@@ -35,5 +35,7 @@ CFE_Status_t ADCS_APP_NoopCmd(const ADCS_APP_NoopCmd_t *Msg);
 CFE_Status_t ADCS_APP_ResetCountersCmd(const ADCS_APP_ResetCountersCmd_t *Msg);
 CFE_Status_t ADCS_APP_ProcessCmd(const ADCS_APP_ProcessCmd_t *Msg);
 CFE_Status_t ADCS_APP_DisplayParamCmd(const ADCS_APP_DisplayParamCmd_t *Msg);
+CFE_Status_t ADCS_APP_SetModeCmd(const ADCS_APP_SetModeCmd_t *Msg);
+CFE_Status_t ADCS_APP_SetParamsCmd(const ADCS_APP_SetParamsCmd_t *Msg);
 
 #endif /* ADCS_APP_CMDS_H */

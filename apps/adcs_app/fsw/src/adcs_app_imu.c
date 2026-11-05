@@ -2,6 +2,7 @@
 #include "adcs_app_imu.h"
 #include "adcs_app_eventids.h"
 #include "imu_status.h"
+#include "imu_data.h"
 #include <math.h>
 #include <string.h>
 

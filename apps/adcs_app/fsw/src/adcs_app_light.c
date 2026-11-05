@@ -1,5 +1,6 @@
 #include "adcs_app.h"
 #include "adcs_app_light.h"
+#include "adcs_app_eventids.h"
 #include <math.h>
 #include <string.h>
 
@@ -13,7 +14,7 @@ void ADCS_APP_ReceiveLight(const CFE_SB_Buffer_t *buffer)
     {
         ADCS_APP_Data.LightReceived = false;
         ADCS_APP_Data.CommandErrorCounter++;
-        CFE_EVS_SendEvent(50, CFE_EVS_EventType_ERROR, "ADCS rejected malformed LIGHT_DATA");
+        CFE_EVS_SendEvent(ADCS_APP_LIGHT_MALFORMED_EID, CFE_EVS_EventType_ERROR, "ADCS rejected malformed LIGHT_DATA");
         return;
     }
     packet = (const LIGHT_DataTlm_t *)buffer;
@@ -21,7 +22,7 @@ void ADCS_APP_ReceiveLight(const CFE_SB_Buffer_t *buffer)
     ADCS_APP_Data.LightTimestamp = timestamp;
     ADCS_APP_Data.LightReceived = true;
     if (packet->Payload.sample_counter == 1 || packet->Payload.sample_counter % 10 == 0)
-        CFE_EVS_SendEvent(51, CFE_EVS_EventType_INFORMATION,
+        CFE_EVS_SendEvent(ADCS_APP_LIGHT_DATA_INF_EID, CFE_EVS_EventType_INFORMATION,
                           "LIGHT_DATA n=%lu error=%.3f error_valid=%u angle=%.2fdeg angle_valid=%u status=%u sim=%u",
                           (unsigned long)packet->Payload.sample_counter,
                           (double)packet->Payload.normalized_diff,

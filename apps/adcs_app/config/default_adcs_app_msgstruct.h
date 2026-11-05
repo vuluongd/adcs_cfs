@@ -67,6 +67,23 @@ typedef struct
 } ADCS_APP_DisplayParamCmd_t;
 
 /*************************************************************************/
+typedef struct
+{
+    CFE_MSG_CommandHeader_t    CommandHeader;
+    ADCS_APP_SetMode_Payload_t Payload;
+} ADCS_APP_SetModeCmd_t;
+
+typedef struct
+{
+    CFE_MSG_CommandHeader_t      CommandHeader;
+    ADCS_APP_SetParams_Payload_t Payload;
+} ADCS_APP_SetParamsCmd_t;
+
+typedef struct
+{
+    CFE_MSG_CommandHeader_t CommandHeader;
+} ADCS_APP_WakeupCmd_t;
+
 /*
 ** Type definition (Sample App housekeeping)
 */

@@ -32,6 +32,8 @@
 #include "adcs_app_tbl.h"
 #include "adcs_app_utils.h"
 #include "adcs_app_msg.h"
+#include "adcs_app_loop.h"
+#include "adcs_app_control.h"
 
 /* The sample_lib module provides the SAMPLE_Function() prototype */
 #include "sample_lib.h"
@@ -53,6 +55,7 @@ CFE_Status_t ADCS_APP_SendHkCmd(const ADCS_APP_SendHkCmd_t *Msg)
     */
     ADCS_APP_Data.HkTlm.Payload.CommandErrorCounter = ADCS_APP_Data.CommandErrorCounter;
     ADCS_APP_Data.HkTlm.Payload.CommandCounter      = ADCS_APP_Data.CommandCounter;
+    ADCS_APP_FillHk();
 
     /*
     ** Send housekeeping telemetry packet...
@@ -162,5 +165,51 @@ CFE_Status_t ADCS_APP_DisplayParamCmd(const ADCS_APP_DisplayParamCmd_t *Msg)
                       (int)Msg->Payload.ValI16,
                       Msg->Payload.ValStr);
 
+    return CFE_SUCCESS;
+}
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * **/
+/* SET_MODE: 0 = DISABLED (stop wheel), 1 = TRACKING                          */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * **/
+CFE_Status_t ADCS_APP_SetModeCmd(const ADCS_APP_SetModeCmd_t *Msg)
+{
+    if (!ADCS_APP_SetMode(Msg->Payload.Mode))
+    {
+        ADCS_APP_Data.CommandErrorCounter++;
+        CFE_EVS_SendEvent(ADCS_APP_PARAM_ERR_EID, CFE_EVS_EventType_ERROR,
+                          "ADCS: SET_MODE %lu rejected (0 = DISABLED, 1 = TRACKING)", (unsigned long)Msg->Payload.Mode);
+        return CFE_STATUS_RANGE_ERROR;
+    }
+    ADCS_APP_Data.CommandCounter++;
+    CFE_EVS_SendEvent(ADCS_APP_MODE_INF_EID, CFE_EVS_EventType_INFORMATION, "ADCS: mode = %s",
+                      Msg->Payload.Mode ? "TRACKING" : "DISABLED");
+    return CFE_SUCCESS;
+}
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * **/
+/* SET_PARAMS: Kp, omega limit, deadband, allow-simulated (validated first)   */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * **/
+CFE_Status_t ADCS_APP_SetParamsCmd(const ADCS_APP_SetParamsCmd_t *Msg)
+{
+    ADCS_Ctrl_Params_t np = ADCS_APP_Data.Params;
+
+    np.kp                = Msg->Payload.Kp;
+    np.omega_limit_rad_s = Msg->Payload.OmegaLimit;
+    np.deadband_rad      = Msg->Payload.DeadbandRad;
+
+    if (!ADCS_Ctrl_ParamsValid(&np) || Msg->Payload.AllowSimulated > 1u)
+    {
+        ADCS_APP_Data.CommandErrorCounter++;
+        CFE_EVS_SendEvent(ADCS_APP_PARAM_ERR_EID, CFE_EVS_EventType_ERROR,
+                          "ADCS: SET_PARAMS rejected (Kp>=0, 0<limit<=%.0f rad/s, 0<=deadband<1.5 rad, sim 0/1)",
+                          (double)ADCS_CTRL_ABS_MAX_LIMIT);
+        return CFE_STATUS_RANGE_ERROR;
+    }
+    ADCS_APP_Data.Params         = np;
+    ADCS_APP_Data.AllowSimulated = (uint8)Msg->Payload.AllowSimulated;
+    ADCS_APP_Data.CommandCounter++;
+    CFE_EVS_SendEvent(ADCS_APP_PARAM_INF_EID, CFE_EVS_EventType_INFORMATION,
+                      "ADCS: Kp=%.2f limit=%.1f rad/s deadband=%.3f rad allow_sim=%u", (double)np.kp,
+                      (double)np.omega_limit_rad_s, (double)np.deadband_rad, (unsigned int)ADCS_APP_Data.AllowSimulated);
     return CFE_SUCCESS;
 }
