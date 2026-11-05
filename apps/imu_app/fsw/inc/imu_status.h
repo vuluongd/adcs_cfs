@@ -11,7 +11,8 @@ enum
     IMU_STATUS_IO_ERROR    = 3,
     IMU_STATUS_BAD_ID      = 4,
     IMU_STATUS_SATURATED   = 5,
-    IMU_STATUS_BAD_INPUT   = 6
+    IMU_STATUS_BAD_INPUT   = 6,
+    IMU_STATUS_WARMING_UP  = 7
 };
 
 #endif
