@@ -16,19 +16,22 @@
 #include <unistd.h>
 
 /* ------------------------------------------------------------------------- */
-/* Defaults.  rad_s_per_hz and the PFM limits are PLACEHOLDERS until the bench  */
-/* test (docs/act_app) gives real numbers for this motor + flywheel.           */
+/* Defaults from the Nidec 24H055M020 bench test (project slides 38 / 61):     */
+/*   - speed is set by pulse FREQUENCY, 0.15 rpm per Hz, linear up to 10 kHz   */
+/*     (~1500 rpm); above 10 kHz the curve flattens, so we never go there.     */
+/*   - driver accepts 100 Hz .. 25 kHz; it starts at 100 Hz.                   */
+/* 0.15 rpm/Hz * 2*pi/60 = 0.015708 rad/s per Hz;  10 kHz -> 157 rad/s.        */
 /* ------------------------------------------------------------------------- */
 void ACT_MotorDefaultConfig(ACT_MotorConfig_t *cfg)
 {
     *cfg = (ACT_MotorConfig_t){
-        .omega_max_rad_s = 300.0f,  /* ~2865 rpm, conservative for a printed flywheel */
-        .slew_rad_s2     = 60.0f,   /* 0 -> 300 rad/s in 5 s                           */
-        .pfm_min_hz      = 300.0f,  /* forum: motor does not start below ~150-250 Hz    */
-        .pfm_max_hz      = 10000.0f,/* forum: self-shutdown above ~15 kHz, keep margin  */
-        .rad_s_per_hz    = 0.03f,   /* TODO bench: 10 kHz -> 300 rad/s is a GUESS       */
+        .omega_max_rad_s = 157.0f,    /* 10 kHz * 0.015708 = top of the linear region (~1500 rpm) */
+        .slew_rad_s2     = 60.0f,     /* 0 -> 157 rad/s in ~2.6 s                                 */
+        .pfm_min_hz      = 100.0f,    /* bench: motor starts at 100 Hz                            */
+        .pfm_max_hz      = 10000.0f,  /* bench: linear only up to 10 kHz                          */
+        .rad_s_per_hz    = 0.015708f, /* bench: 0.15 rpm/Hz                                       */
         .sim_tau_s       = 0.8f,
-        .stop_threshold  = 2.0f     /* rad/s                                            */
+        .stop_threshold  = 2.0f       /* rad/s (~19 rpm)                                          */
     };
 }
 
@@ -44,10 +47,17 @@ static int ACT_ConfigValid(const ACT_MotorConfig_t *c)
 }
 
 /* ------------------------------------------------------------------------- */
-/* gpio backend: Raspberry Pi sysfs.  UNTESTED - written from the forum pinout. */
+/* gpio backend: Raspberry Pi sysfs.                                           */
+/* Wiring (project slides 40 / 57, Pi -> 74AHCT125 3.3->5 V -> Nidec 12-pin):  */
+/*   GPIO18 hardware PWM -> pin 12 PFM      (dtoverlay=pwm, pwmchip0/pwm0)     */
+/*   GPIO24              -> pin 11 Start    (ACT_APP_GPIO_ENABLE)               */
+/*   GPIO23              -> pin 9  CW/CCW   (ACT_APP_GPIO_DIR)                  */
+/*   GPIO25              -> pin 10 BRAKE    (ACT_APP_GPIO_BRAKE)                */
+/*   pins 1-2 +12 V, 3-5 GND, 6 TOOL0, 7 RESET, 8 Status: never driven by us.  */
 /* PFM = hardware PWM with variable period and 50 % duty.                      */
-/* Requires dtoverlay=pwm (GPIO18 -> pwmchip0/pwm0) and exported GPIOs.        */
-/* Env overrides: ACT_APP_PWM_DIR, ACT_APP_GPIO_ENABLE/DIR/BRAKE (BCM numbers).*/
+/* Env: ACT_APP_PWM_DIR, ACT_APP_GPIO_ENABLE/DIR/BRAKE (BCM numbers) and        */
+/* ACT_APP_GPIO_BASE: sysfs number = BASE + BCM.  Pi kernels >= 6.6 put the     */
+/* GPIO chip at base 512 (GPIO18 = gpio530); check /sys/class/gpio/gpiochip*. */
 /* ------------------------------------------------------------------------- */
 static const char *ACT_Env(const char *name, const char *dflt)
 {
@@ -65,20 +75,32 @@ static int ACT_WriteStr(const char *path, const char *val)
     return (n == (ssize_t)strlen(val)) ? 0 : -1;
 }
 
+#define ACT_GPIO_ENABLE_DFLT "24" /* Nidec pin 11 Start  */
+#define ACT_GPIO_DIR_DFLT    "23" /* Nidec pin 9  CW/CCW */
+#define ACT_GPIO_BRAKE_DFLT  "25" /* Nidec pin 10 BRAKE  */
+
+/* sysfs GPIO number for a BCM pin: ACT_APP_GPIO_BASE (default 0) + BCM */
+static long ACT_GpioNum(const char *bcm)
+{
+    return strtol(ACT_Env("ACT_APP_GPIO_BASE", "0"), NULL, 10) + strtol(bcm, NULL, 10);
+}
+
 static int ACT_GpioWrite(const char *bcm, int level)
 {
     char path[96];
-    snprintf(path, sizeof(path), "/sys/class/gpio/gpio%s/value", bcm);
+    snprintf(path, sizeof(path), "/sys/class/gpio/gpio%ld/value", ACT_GpioNum(bcm));
     return ACT_WriteStr(path, level ? "1" : "0");
 }
 
 static int ACT_GpioExportOut(const char *bcm)
 {
-    char path[96];
-    snprintf(path, sizeof(path), "/sys/class/gpio/gpio%s/direction", bcm);
+    char path[96], num[16];
+    long n = ACT_GpioNum(bcm);
+    snprintf(path, sizeof(path), "/sys/class/gpio/gpio%ld/direction", n);
     if (access(path, W_OK) != 0)
     {
-        (void)ACT_WriteStr("/sys/class/gpio/export", bcm); /* may already exist */
+        snprintf(num, sizeof(num), "%ld", n);
+        (void)ACT_WriteStr("/sys/class/gpio/export", num); /* may already exist */
     }
     return ACT_WriteStr(path, "out");
 }
@@ -88,9 +110,9 @@ static int ACT_GpioOpen(ACT_Motor_t *m)
     const char *pwmdir = ACT_Env("ACT_APP_PWM_DIR", "/sys/class/pwm/pwmchip0/pwm0");
     char path[160];
 
-    if (ACT_GpioExportOut(ACT_Env("ACT_APP_GPIO_ENABLE", "23")) != 0 ||
-        ACT_GpioExportOut(ACT_Env("ACT_APP_GPIO_DIR", "24")) != 0 ||
-        ACT_GpioExportOut(ACT_Env("ACT_APP_GPIO_BRAKE", "25")) != 0)
+    if (ACT_GpioExportOut(ACT_Env("ACT_APP_GPIO_ENABLE", ACT_GPIO_ENABLE_DFLT)) != 0 ||
+        ACT_GpioExportOut(ACT_Env("ACT_APP_GPIO_DIR", ACT_GPIO_DIR_DFLT)) != 0 ||
+        ACT_GpioExportOut(ACT_Env("ACT_APP_GPIO_BRAKE", ACT_GPIO_BRAKE_DFLT)) != 0)
         return -1;
 
     snprintf(path, sizeof(path), "%s/period", pwmdir);
@@ -111,9 +133,9 @@ static int ACT_GpioApply(ACT_Motor_t *m)
     char buf[32], path[160];
     ACT_MotorState_t *s = &m->st;
 
-    if (ACT_GpioWrite(ACT_Env("ACT_APP_GPIO_BRAKE", "25"), !s->braking) != 0) return -1; /* BRAKE low = brake */
-    if (ACT_GpioWrite(ACT_Env("ACT_APP_GPIO_DIR", "24"), s->direction > 0) != 0) return -1; /* high = CCW */
-    if (ACT_GpioWrite(ACT_Env("ACT_APP_GPIO_ENABLE", "23"), s->enabled) != 0) return -1;
+    if (ACT_GpioWrite(ACT_Env("ACT_APP_GPIO_BRAKE", ACT_GPIO_BRAKE_DFLT), !s->braking) != 0) return -1; /* pin 10: low = brake (TODO confirm on bench) */
+    if (ACT_GpioWrite(ACT_Env("ACT_APP_GPIO_DIR", ACT_GPIO_DIR_DFLT), s->direction > 0) != 0) return -1; /* pin 9: high = CCW (TODO confirm on bench) */
+    if (ACT_GpioWrite(ACT_Env("ACT_APP_GPIO_ENABLE", ACT_GPIO_ENABLE_DFLT), s->enabled) != 0) return -1; /* pin 11: high = run (TODO confirm on bench) */
 
     snprintf(path, sizeof(path), "%s/enable", pwmdir);
     if (s->pfm_hz > 0.0f)
