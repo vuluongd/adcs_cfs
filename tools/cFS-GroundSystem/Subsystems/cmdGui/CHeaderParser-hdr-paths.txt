@@ -1,1 +1,2 @@
-/home/lunog/adcs_cfs/tools/cFS-GroundSystem/Subsystems/cmdGui/act_app_gs_hdr.h
+#/home/lunog/adcs_cfs/tools/cFS-GroundSystem/Subsystems/cmdGui/act_app_gs_hdr.h
+/home/lunog/adcs_cfs/tools/cFS-GroundSystem/Subsystems/cmdGui/adcs_app_gs_hdr.h

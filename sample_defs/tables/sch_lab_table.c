@@ -39,6 +39,7 @@
 #include "light_app_msgids.h"
 #include "imu_app_msgids.h"
 #include "act_app_msgids.h"
+#include "adcs_app_msgids.h"
 
 #ifdef CFS_SBN_ENABLED
 #include "sbn_msgids.h"
@@ -62,6 +63,8 @@ SCH_LAB_ScheduleTable_t SCH_TBL_Structure =
         {CFE_SB_MSGID_WRAP_VALUE(LIGHT_APP_WAKEUP_MID),   2, 0}, /* LIGHT at 5Hz / 200ms */
         {CFE_SB_MSGID_WRAP_VALUE(IMU_APP_WAKEUP_MID), 1, 0}, /* IMU at 10Hz */
         {CFE_SB_MSGID_WRAP_VALUE(ACT_APP_WAKEUP_MID),     1, 0}, /* ACT (reaction wheel) at 10Hz */
+        {CFE_SB_MSGID_WRAP_VALUE(ADCS_APP_WAKEUP_MID),    1, 0}, /* ADCS outer loop at 10Hz */
+        {CFE_SB_MSGID_WRAP_VALUE(ADCS_APP_SEND_HK_MID),   10, 0}, /* ADCS HK every 1.0 s (testing) */
         {CFE_SB_MSGID_WRAP_VALUE(CFE_ES_SEND_HK_MID),     40, 0}, /* every 4.0 seconds */
         {CFE_SB_MSGID_WRAP_VALUE(CFE_EVS_SEND_HK_MID),    42, 0}, /* every 4.2 seconds */
         {CFE_SB_MSGID_WRAP_VALUE(CFE_TIME_SEND_HK_MID),   44, 0}, /* every 4.4 seconds */

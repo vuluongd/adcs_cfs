@@ -65,6 +65,8 @@ int main(void)
     in.light_usable = true; in.light_counter = 11; in.imu_usable = false;
     ADCS_Ctrl_Step(&p, &m, &in, 0.1f, &o);
     CHECK(o.omega_cmd_rad_s > 0.0f);
+    ADCS_Ctrl_Step(&p, &m, &in, 0.1f, &o); /* cùng mẫu, không được nhấp nháy về 0 */
+    CHECK(o.omega_cmd_rad_s > 0.0f && o.state == ADCS_CTRL_LIGHT);
 
     /* 10. mô phỏng vòng kín: thân + bánh đà bảo toàn động lượng, bánh bám lệnh bậc 1 */
     {

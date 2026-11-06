@@ -45,7 +45,7 @@ void ADCS_Ctrl_Step(const ADCS_Ctrl_Params_t *p, ADCS_Ctrl_Mem_t *m, const ADCS_
 {
     float err = 0.0f;
     bool  have_err = false;
-    bool  fresh = in->light_usable && (!m->have_target || in->light_counter != m->last_light_counter);
+    bool  fresh = in->light_usable && (!m->have_counter || in->light_counter != m->last_light_counter);
 
     out->state = ADCS_CTRL_LOST;
 
@@ -53,6 +53,7 @@ void ADCS_Ctrl_Step(const ADCS_Ctrl_Params_t *p, ADCS_Ctrl_Mem_t *m, const ADCS_
     {
         /* Mẫu ánh sáng mới: ghi lại bearing cùng IMU angle tại thời điểm đó. */
         m->have_target        = true;
+        m->have_counter       = true;
         m->bearing_cap_rad    = in->bearing_rad;
         m->last_light_counter = in->light_counter;
         m->since_light_s      = 0.0f;
@@ -74,9 +75,17 @@ void ADCS_Ctrl_Step(const ADCS_Ctrl_Params_t *p, ADCS_Ctrl_Mem_t *m, const ADCS_
             have_err   = true;
             out->state = ADCS_CTRL_IMU_HOLD;
         }
+        else if (in->light_usable)
+        {
+            /* Không có IMU để nội suy (hoặc IMU hỏng): dùng bearing mới nhất của light_app
+               (ADCS_APP_LightUsable đã đảm bảo mẫu còn mới) => P thuần theo ánh sáng, 5 Hz. */
+            err        = in->bearing_rad;
+            have_err   = true;
+            out->state = ADCS_CTRL_LIGHT;
+        }
         else
         {
-            /* Quá hạn giữ, hoặc không có IMU để ngoại suy: bearing cũ không còn đúng
+            /* Quá hạn giữ, hoặc không còn nguồn nào: bearing cũ không còn đúng
                khi thân đang quay => dừng, KHÔNG dùng số liệu cũ. */
             m->have_target = false;
         }
