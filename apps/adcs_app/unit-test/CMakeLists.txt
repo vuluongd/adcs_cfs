@@ -42,19 +42,20 @@ target_link_libraries(adcs_app_ut_common core_api ut_assert)
 # Generate a dedicated "testrunner" executable for each test file
 # Accomplish this by cycling through all the app's source files, there must be
 # a *_tests file for each
-foreach(SRCFILE ${APP_SRC_FILES})
+# Chỉ tạo coverage test cho những module đã có file coveragetest_*.c
+set(UT_SRC_FILES
+  fsw/src/adcs_app.c
+  fsw/src/adcs_app_cmds.c
+  fsw/src/adcs_app_utils.c
+  fsw/src/adcs_app_dispatch.c
+)
 
-    # Get the base sourcefile name as a module name without path or the
-    # extension, this will be used as the base name of the unit test file.
+foreach(SRCFILE ${UT_SRC_FILES})
+
     get_filename_component(UNIT_NAME "${SRCFILE}" NAME_WE)
-
-    # Use the module name to make the test name by adding _tests to the end
     set(TESTS_NAME "coveragetest_${UNIT_NAME}")
-
-    # Make the test sourcefile name with unit test path and extension
     set(TESTS_SOURCE_FILE "${CMAKE_CURRENT_SOURCE_DIR}/coveragetest/${TESTS_NAME}.c")
 
-    # Create the coverage test executable
     add_cfe_coverage_test(adcs_app "${UNIT_NAME}" "${TESTS_SOURCE_FILE}" "../${SRCFILE}")
     add_cfe_coverage_dependency(adcs_app "${UNIT_NAME}" adcs_app)
     target_link_libraries(coverage-adcs_app-${UNIT_NAME}-testrunner coverage-adcs_app-stubs adcs_app_ut_common)

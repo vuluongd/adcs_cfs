@@ -52,6 +52,7 @@ typedef struct
 typedef struct
 {
     bool     have_target;
+    bool     have_counter;      /* true sau khi đã nhận ít nhất 1 mẫu ánh sáng */
     bool     imu_cap_valid;
     float    bearing_cap_rad; /* bearing lúc lấy mẫu ánh sáng gần nhất                  */
     float    imu_cap_rad;     /* IMU angle tại thời điểm đó                             */
