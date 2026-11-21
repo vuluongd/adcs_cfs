@@ -1,10 +1,3 @@
-/*
- * act_motor.c - reaction-wheel motor layer (see act_motor.h).
- *
- * The control logic (clamp, slew, direction reversal, brake) is identical for both
- * backends; only "write the output" and "read the speed" differ.  Nothing in here
- * sleeps or blocks: the cFS wakeup handler calls ACT_MotorStep() at 10 Hz.
- */
 #define _POSIX_C_SOURCE 200809L
 #define _DEFAULT_SOURCE 1
 #include <errno.h>
@@ -17,19 +10,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
-/* ------------------------------------------------------------------------- */
-/* Defaults.  pwm_freq_hz, the duty limits and rad_s_per_duty are PLACEHOLDERS */
-/* until the bench test (docs/act_app) gives real numbers for the new PWM      */
-/* driver + flywheel.                                                           */
-/* ------------------------------------------------------------------------- */
 void ACT_MotorDefaultConfig(ACT_MotorConfig_t *cfg)
 {
     *cfg = (ACT_MotorConfig_t){
-        .omega_max_rad_s = 300.0f,  /* ~2865 rpm, conservative for a printed flywheel */
+        .omega_max_rad_s = 300.0f, 
         .slew_rad_s2     = 60.0f,   /* 0 -> 300 rad/s in 5 s                           */
-        .pwm_freq_hz     = 20000.0f,/* TODO bench: fixed carrier, set to driver spec    */
-        .duty_min_pct    = 10.0f,   /* TODO bench: dead zone, motor does not start below */
+        .pwm_freq_hz     = 20000.0f,
+        .duty_min_pct    = 10.0f,   
         .duty_max_pct    = 95.0f,   /* keep margin below 100 %                          */
         .rad_s_per_duty  = 3.0f,    /* TODO bench: 100 % -> 300 rad/s is a GUESS        */
         .sim_tau_s       = 0.8f,
