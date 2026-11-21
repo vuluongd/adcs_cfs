@@ -2,7 +2,9 @@
 export ACT_APP_BACKEND=gpio
 export ACT_APP_PWM_DIR=/sys/class/pwm/pwmchip0/pwm0
 export ACT_APP_GPIO_ENABLE=none
+export ACT_APP_GPIO_DIR=536          # BCM 24 + base 512
 export ACT_APP_GPIO_BRAKE=none
+export ACT_APP_RAD_S_PER_DUTY=1      # tốc độ lệnh (rad/s) = duty (%)
 export ACT_APP_DUTY_MAX_PCT=90
 export IMU_APP_BACKEND=i2c
 export IMU_APP_I2C_DEVICE=/dev/i2c-1
