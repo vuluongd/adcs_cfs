@@ -8,4 +8,6 @@ sudo ACT_APP_BACKEND=gpio \
      ACT_APP_GPIO_DIR=none \
      ACT_APP_GPIO_BRAKE=none \
      ACT_APP_PWM_FREQ_HZ=1000\
+     ACT_APP_DUTY_MAX_PCT=90\
+     ACT_APP_DUTY_MIN_PCT=90\
      ./build-act-unit/act_demo 90
