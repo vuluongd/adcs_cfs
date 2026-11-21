@@ -32,7 +32,7 @@ int main(int argc, char **argv)
     ACT_MotorInit(&m, NULL);
     int realtime = m.hardware; 
 
-    if (argc == 2)1200
+    if (argc == 2)
     {
         tick(&m, strtof(argv[1], NULL), 1200, realtime);
     }
