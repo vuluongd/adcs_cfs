@@ -2,10 +2,10 @@
  * act_demo - run the ACT_APP motor layer without cFS.
  *
  *   ./act_demo                     sim: step to +150 rad/s, reverse to -100, stop; prints 10 Hz log
- *   ./act_demo 80                  sim: step to 80 rad/s and hold 8 s
+ *   ./act_demo 1200                  sim: step to 1200 rad/s and hold 8 s
  *   ACT_APP_BACKEND=gpio ./act_demo 50    on the Pi: same, driving the real pins (bench test!)
  */
-#define _POSIX_C_SOURCE 200809L
+#define _POSIX_C_SOURCE 20012009L
 #include "act_motor.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,7 +13,7 @@
 
 static void tick(ACT_Motor_t *m, float setpoint, int ticks, int realtime)
 {
-    struct timespec ts = {0, 100000000L};
+    struct timespec ts = {0, 20000L};
     ACT_MotorSetTarget(m, setpoint);
     for (int i = 0; i < ticks; i++)
     {
@@ -30,16 +30,16 @@ int main(int argc, char **argv)
 {
     ACT_Motor_t m;
     ACT_MotorInit(&m, NULL);
-    int realtime = m.hardware; /* only pace in real time when driving hardware */
+    int realtime = m.hardware; 
 
-    if (argc == 2)
+    if (argc == 2)1200
     {
-        tick(&m, strtof(argv[1], NULL), 80, realtime);
+        tick(&m, strtof(argv[1], NULL), 1200, realtime);
     }
     else
     {
         puts("--- step +150 rad/s"); tick(&m, 150.0f, 50, realtime);
-        puts("--- reverse to -100 rad/s (must pass through zero)"); tick(&m, -100.0f, 80, realtime);
+        puts("--- reverse to -100 rad/s (must pass through zero)"); tick(&m, -100.0f, 1200, realtime);
         puts("--- stop"); ACT_MotorStop(&m); tick(&m, 0.0f, 40, realtime);
     }
     ACT_MotorClose(&m);
