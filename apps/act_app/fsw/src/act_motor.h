@@ -8,15 +8,16 @@ typedef struct
 {
     float omega_max_rad_s;   /* hard clamp on |setpoint|                               */
     float slew_rad_s2;       /* max |d(target)/dt|: the 24H055 dislikes step changes   */
-    float pfm_min_hz;        /* below this the Nidec does not start                    */
-    float pfm_max_hz;        /* above this it self-shuts; stay well under 15 kHz       */
-    float rad_s_per_hz;      /* open-loop map omega = rad_s_per_hz * pfm_hz (bench)    */
+    float pwm_freq_hz;       /* FIXED PWM carrier frequency (speed = duty, not frequency) */
+    float duty_min_pct;      /* below this the motor does not start (dead zone)        */
+    float duty_max_pct;      /* upper clamp, <= 100                                    */
+    float rad_s_per_duty;    /* open-loop map omega = rad_s_per_duty * duty_pct (bench)*/
     float sim_tau_s;         /* simulated wheel time constant                          */
     float stop_threshold;    /* |target| below this => brake and drop ENABLE           */
     uint8_t use_pi;          /* 0 = open-loop, 1 = PI + Feedforward */
-    float   kp;
-    float   ki;
-    float   integral_max;
+    float   kp;                 /* % duty per rad/s of error   */
+    float   ki;                 /* % duty per rad (integrated) */
+    float   integral_max;       /* anti-windup clamp, % duty   */
     uint8_t use_encoder;        /* 1 = đọc encoder thật        */
     float   enc_counts_per_rev; /* 100 (x1) hoặc 400 (x4)      */
     float   enc_lpf_alpha;      /* 0.2..0.5, lọc tốc độ        */
@@ -27,7 +28,7 @@ typedef struct
     float   cmd_omega;       /* last setpoint requested                                */
     float   target_omega;    /* after clamp + slew                                     */
     float   meas_omega;      /* measured (FG) or modelled                              */
-    float   pfm_hz;          /* frequency currently commanded                          */
+    float   duty_pct;        /* PWM duty (0..100 %) currently commanded                */
     uint8_t status;          /* ACT_STATUS_*                                           */
     uint8_t saturated;
     uint8_t simulated;
@@ -47,6 +48,7 @@ typedef struct
     int               pwm_fd_period;
     int               pwm_fd_duty;
     int               gpio_ready;
+    unsigned long     pwm_period_ns; /* fixed period = 1e9 / cfg.pwm_freq_hz           */
     /* sim backend state */
     float             sim_omega;
     float             integral;

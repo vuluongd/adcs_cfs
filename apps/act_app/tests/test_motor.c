@@ -27,7 +27,7 @@ int main(void)
     run(&m, 10);
     assert(m.st.target_omega <= c.slew_rad_s2 * 1.0f + 1e-3f);
     assert(m.st.enabled == 1 && m.st.braking == 0 && m.st.direction == 1);
-    assert(m.st.pfm_hz >= c.pfm_min_hz && m.st.pfm_hz <= c.pfm_max_hz);
+    assert(m.st.duty_pct >= c.duty_min_pct && m.st.duty_pct <= c.duty_max_pct);
 
     /* settle */
     run(&m, 100);
@@ -44,10 +44,10 @@ int main(void)
     assert(m.st.direction == -1);
     assert(fabsf(m.st.meas_omega + 100.0f) < 5.0f);
 
-    /* stop: brake + disable + pfm 0 */
+    /* stop: brake + disable + duty 0 */
     ACT_MotorStop(&m);
     run(&m, 200);
-    assert(m.st.enabled == 0 && m.st.braking == 1 && m.st.pfm_hz == 0.0f);
+    assert(m.st.enabled == 0 && m.st.braking == 1 && m.st.duty_pct == 0.0f);
     assert(fabsf(m.st.meas_omega) < c.stop_threshold);
 
     ACT_MotorClose(&m);

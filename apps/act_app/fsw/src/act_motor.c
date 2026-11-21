@@ -19,24 +19,26 @@
 #include <unistd.h>
 
 /* ------------------------------------------------------------------------- */
-/* Defaults.  rad_s_per_hz and the PFM limits are PLACEHOLDERS until the bench  */
-/* test (docs/act_app) gives real numbers for this motor + flywheel.           */
+/* Defaults.  pwm_freq_hz, the duty limits and rad_s_per_duty are PLACEHOLDERS */
+/* until the bench test (docs/act_app) gives real numbers for the new PWM      */
+/* driver + flywheel.                                                           */
 /* ------------------------------------------------------------------------- */
 void ACT_MotorDefaultConfig(ACT_MotorConfig_t *cfg)
 {
     *cfg = (ACT_MotorConfig_t){
         .omega_max_rad_s = 300.0f,  /* ~2865 rpm, conservative for a printed flywheel */
         .slew_rad_s2     = 60.0f,   /* 0 -> 300 rad/s in 5 s                           */
-        .pfm_min_hz      = 300.0f,  /* forum: motor does not start below ~150-250 Hz    */
-        .pfm_max_hz      = 10000.0f,/* forum: self-shutdown above ~15 kHz, keep margin  */
-        .rad_s_per_hz    = 0.03f,   /* TODO bench: 10 kHz -> 300 rad/s is a GUESS       */
+        .pwm_freq_hz     = 20000.0f,/* TODO bench: fixed carrier, set to driver spec    */
+        .duty_min_pct    = 10.0f,   /* TODO bench: dead zone, motor does not start below */
+        .duty_max_pct    = 95.0f,   /* keep margin below 100 %                          */
+        .rad_s_per_duty  = 3.0f,    /* TODO bench: 100 % -> 300 rad/s is a GUESS        */
         .sim_tau_s       = 0.8f,
         .stop_threshold  = 2.0f,    /* rad/s                                            */
-        /*PI gain*/
+        /*PI gain (output unit = % duty)*/
         .use_pi = 0, /* 0 = open-loop (mặc định), 1 = PI*/
-        .kp              = 15.0f,
-        .ki              = 8.0f ,
-        .integral_max    = 2000.0f,
+        .kp              = 0.15f,   /* % per rad/s, ~0.45 x feedforward slope (1/3)     */
+        .ki              = 0.08f,
+        .integral_max    = 20.0f,   /* % duty                                           */
         .use_encoder        = 0,       /* bật sau khi RL78 chạy ổn */
         .enc_counts_per_rev = 100.0f,
         .enc_lpf_alpha      = 0.3f
@@ -47,9 +49,10 @@ static int ACT_ConfigValid(const ACT_MotorConfig_t *c)
 {
     return isfinite(c->omega_max_rad_s) && c->omega_max_rad_s > 0.0f &&
            isfinite(c->slew_rad_s2) && c->slew_rad_s2 > 0.0f &&
-           isfinite(c->pfm_min_hz) && c->pfm_min_hz > 0.0f &&
-           isfinite(c->pfm_max_hz) && c->pfm_max_hz > c->pfm_min_hz &&
-           isfinite(c->rad_s_per_hz) && c->rad_s_per_hz > 0.0f &&
+           isfinite(c->pwm_freq_hz) && c->pwm_freq_hz > 0.0f &&
+           isfinite(c->duty_min_pct) && c->duty_min_pct > 0.0f &&
+           isfinite(c->duty_max_pct) && c->duty_max_pct > c->duty_min_pct && c->duty_max_pct <= 100.0f &&
+           isfinite(c->rad_s_per_duty) && c->rad_s_per_duty > 0.0f &&
            isfinite(c->sim_tau_s) && c->sim_tau_s > 0.0f &&
            isfinite(c->stop_threshold) && c->stop_threshold >= 0.0f &&
            isfinite(c->kp) && c->kp >= 0.0f &&
@@ -60,8 +63,8 @@ static int ACT_ConfigValid(const ACT_MotorConfig_t *c)
 }
 
 /* ------------------------------------------------------------------------- */
-/* gpio backend: Raspberry Pi sysfs.  UNTESTED - written from the forum pinout. */
-/* PFM = hardware PWM with variable period and 50 % duty.                      */
+/* gpio backend: Raspberry Pi sysfs.  UNTESTED.                                */
+/* PWM = hardware PWM with FIXED period (cfg.pwm_freq_hz) and variable duty.   */
 /* Requires dtoverlay=pwm (GPIO18 -> pwmchip0/pwm0) and exported GPIOs.        */
 /* Env overrides: ACT_APP_PWM_DIR, ACT_APP_GPIO_ENABLE/DIR/BRAKE (BCM numbers).*/
 /* ------------------------------------------------------------------------- */
@@ -96,7 +99,49 @@ static int ACT_GpioExportOut(const char *bcm)
     {
         (void)ACT_WriteStr("/sys/class/gpio/export", bcm); /* may already exist */
     }
-    return ACT_WriteStr(path, "out");
+    if (ACT_WriteStr(path, "out") != 0)
+    {
+        /* On newer Pi OS kernels sysfs GPIO numbers have an offset: see /sys/class/gpio/gpiochip*\/base */
+        fprintf(stderr, "ACT: GPIO %s: cannot set direction (%s) - %s missing/unwritable; check gpiochip base offset\n",
+                bcm, strerror(errno), path);
+        return -1;
+    }
+    return 0;
+}
+
+/* Close any fds left from a previous (failed) open so repeated retries cannot leak. */
+static void ACT_PwmCloseFds(ACT_Motor_t *m)
+{
+    if (m->pwm_fd_period >= 0) close(m->pwm_fd_period);
+    if (m->pwm_fd_duty >= 0) close(m->pwm_fd_duty);
+    m->pwm_fd_period = m->pwm_fd_duty = -1;
+}
+
+/* pwmN only appears after writing N to pwmchipX/export. */
+static int ACT_PwmExport(const char *pwmdir)
+{
+    char path[160];
+    int  i;
+
+    snprintf(path, sizeof(path), "%s/period", pwmdir);
+    if (access(path, W_OK) == 0) return 0;                      /* already exported */
+
+    snprintf(path, sizeof(path), "%s/export", ACT_Env("ACT_APP_PWM_CHIP", "/sys/class/pwm/pwmchip0"));
+    if (ACT_WriteStr(path, ACT_Env("ACT_APP_PWM_CH", "0")) != 0)
+    {
+        fprintf(stderr, "ACT: PWM export failed (%s): %s - is dtoverlay=pwm enabled in /boot/firmware/config.txt "
+                        "(or /boot/config.txt)? chip path wrong? set ACT_APP_PWM_CHIP / ACT_APP_PWM_CH\n",
+                path, strerror(errno));
+        return -1;
+    }
+    snprintf(path, sizeof(path), "%s/period", pwmdir);
+    for (i = 0; i < 20; i++)                                    /* up to ~1 s for udev permissions */
+    {
+        if (access(path, W_OK) == 0) return 0;
+        usleep(50000);
+    }
+    fprintf(stderr, "ACT: PWM channel exported but %s not writable (check ACT_APP_PWM_DIR)\n", path);
+    return -1;
 }
 
 static int ACT_GpioOpen(ACT_Motor_t *m)
@@ -104,21 +149,65 @@ static int ACT_GpioOpen(ACT_Motor_t *m)
     const char *pwmdir = ACT_Env("ACT_APP_PWM_DIR", "/sys/class/pwm/pwmchip0/pwm0");
     char path[160];
 
+    ACT_PwmCloseFds(m);
+
     if (ACT_GpioExportOut(ACT_Env("ACT_APP_GPIO_ENABLE", "23")) != 0 ||
         ACT_GpioExportOut(ACT_Env("ACT_APP_GPIO_DIR", "24")) != 0 ||
         ACT_GpioExportOut(ACT_Env("ACT_APP_GPIO_BRAKE", "25")) != 0)
         return -1;
 
+    if (ACT_PwmExport(pwmdir) != 0) return -1;
+
     snprintf(path, sizeof(path), "%s/period", pwmdir);
     m->pwm_fd_period = open(path, O_WRONLY | O_CLOEXEC);
     snprintf(path, sizeof(path), "%s/duty_cycle", pwmdir);
     m->pwm_fd_duty = open(path, O_WRONLY | O_CLOEXEC);
-    if (m->pwm_fd_period < 0 || m->pwm_fd_duty < 0) return -1;
+    if (m->pwm_fd_period < 0 || m->pwm_fd_duty < 0)
+    {
+        fprintf(stderr, "ACT: cannot open PWM period/duty_cycle under %s: %s\n", pwmdir, strerror(errno));
+        ACT_PwmCloseFds(m);
+        return -1;
+    }
 
     snprintf(path, sizeof(path), "%s/enable", pwmdir);
     (void)ACT_WriteStr(path, "0");
+
+    /* Fixed carrier: program the period once, while the channel is disabled. */
+    m->pwm_period_ns = (unsigned long)(1.0e9f / m->cfg.pwm_freq_hz);
+    if (m->pwm_period_ns == 0ul) { ACT_PwmCloseFds(m); return -1; }
+    if (dprintf(m->pwm_fd_duty, "0") < 0 ||                           /* duty <= period always */
+        dprintf(m->pwm_fd_period, "%lu", m->pwm_period_ns) < 0)
+    {
+        fprintf(stderr, "ACT: cannot program PWM period %lu ns: %s\n", m->pwm_period_ns, strerror(errno));
+        ACT_PwmCloseFds(m);
+        return -1;
+    }
+
     m->gpio_ready = 1;
     return 0;
+}
+
+/* Best effort, ignores errors: PWM off, ENABLE low, BRAKE asserted (low). Used on I/O error and on close. */
+static void ACT_GpioSafeOff(void)
+{
+    const char *pwmdir = ACT_Env("ACT_APP_PWM_DIR", "/sys/class/pwm/pwmchip0/pwm0");
+    char path[160];
+
+    snprintf(path, sizeof(path), "%s/enable", pwmdir);
+    (void)ACT_WriteStr(path, "0");
+    (void)ACT_GpioWrite(ACT_Env("ACT_APP_GPIO_ENABLE", "23"), 0);
+    (void)ACT_GpioWrite(ACT_Env("ACT_APP_GPIO_BRAKE", "25"), 0);
+}
+
+static void ACT_EnvFloat(const char *name, float *dst)
+{
+    const char *v = getenv(name);
+    char *end = NULL;
+    float f;
+    if (v == NULL || v[0] == '\0') return;
+    f = strtof(v, &end);
+    if (end != v && *end == '\0') *dst = f;
+    else fprintf(stderr, "ACT: ignoring bad value for %s='%s'\n", name, v);
 }
 
 static int ACT_GpioApply(ACT_Motor_t *m)
@@ -132,14 +221,12 @@ static int ACT_GpioApply(ACT_Motor_t *m)
     if (ACT_GpioWrite(ACT_Env("ACT_APP_GPIO_ENABLE", "23"), s->enabled) != 0) return -1;
 
     snprintf(path, sizeof(path), "%s/enable", pwmdir);
-    if (s->pfm_hz > 0.0f)
+    if (s->duty_pct > 0.0f)
     {
-        unsigned long period_ns = (unsigned long)(1.0e9f / s->pfm_hz);
-        /* order matters in sysfs: duty must stay <= period */
-        if (dprintf(m->pwm_fd_duty, "0") < 0) return -1;
-        snprintf(buf, sizeof(buf), "%lu", period_ns);
-        if (dprintf(m->pwm_fd_period, "%s", buf) < 0) return -1;
-        snprintf(buf, sizeof(buf), "%lu", period_ns / 2u);
+        float         d       = (s->duty_pct > 100.0f) ? 100.0f : s->duty_pct;
+        unsigned long high_ns = (unsigned long)((double)m->pwm_period_ns * (double)d / 100.0);
+        if (high_ns > m->pwm_period_ns) high_ns = m->pwm_period_ns;   /* duty must stay <= period */
+        snprintf(buf, sizeof(buf), "%lu", high_ns);
         if (dprintf(m->pwm_fd_duty, "%s", buf) < 0) return -1;
         return ACT_WriteStr(path, "1");
     }
@@ -221,6 +308,12 @@ void ACT_MotorInit(ACT_Motor_t *m, const ACT_MotorConfig_t *cfg)
     m->enc_fd = -1;
     if (cfg != NULL) m->cfg = *cfg; else ACT_MotorDefaultConfig(&m->cfg);
 
+    /* Bench overrides, so tuning does not need a rebuild (validated by ACT_ConfigValid). */
+    ACT_EnvFloat("ACT_APP_PWM_FREQ_HZ",       &m->cfg.pwm_freq_hz);
+    ACT_EnvFloat("ACT_APP_DUTY_MIN_PCT",      &m->cfg.duty_min_pct);
+    ACT_EnvFloat("ACT_APP_DUTY_MAX_PCT",      &m->cfg.duty_max_pct);
+    ACT_EnvFloat("ACT_APP_RAD_S_PER_DUTY",    &m->cfg.rad_s_per_duty);
+
     /* Unknown backend is treated as hardware so it fails loudly, never silently simulates. */
     m->hardware      = backend != NULL && strcmp(backend, "sim") != 0;
     m->backend_valid = !m->hardware || strcmp(backend, "gpio") == 0;
@@ -235,13 +328,12 @@ void ACT_MotorInit(ACT_Motor_t *m, const ACT_MotorConfig_t *cfg)
 void ACT_MotorClose(ACT_Motor_t *m)
 {
     m->st.cmd_omega = m->st.target_omega = 0.0f;
-    m->st.pfm_hz    = 0.0f;
+    m->st.duty_pct  = 0.0f;
     m->st.enabled   = 0;
     m->st.braking   = 1;
     if (m->hardware && m->gpio_ready) (void)ACT_GpioApply(m);
-    if (m->pwm_fd_period >= 0) close(m->pwm_fd_period);
-    if (m->pwm_fd_duty >= 0) close(m->pwm_fd_duty);
-    m->pwm_fd_period = m->pwm_fd_duty = -1;
+    if (m->hardware) ACT_GpioSafeOff();   /* even if the last apply failed: never leave the PWM running */
+    ACT_PwmCloseFds(m);
     if (m->enc_fd >= 0) close(m->enc_fd);
     m->enc_fd = -1;
     m->gpio_ready = 0;
@@ -281,7 +373,7 @@ uint8_t ACT_MotorStep(ACT_Motor_t *m, float dt_s)
     if (!m->backend_valid || !ACT_ConfigValid(c))
     {
         s->status = ACT_STATUS_BAD_INPUT;
-        s->enabled = 0; s->braking = 1; s->pfm_hz = 0.0f;
+        s->enabled = 0; s->braking = 1; s->duty_pct = 0.0f;
         return s->status;
     }
     if (!(dt_s > 0.0f) || dt_s > 0.5f) dt_s = 0.0f; /* first sample or scheduler gap: hold */
@@ -330,11 +422,11 @@ uint8_t ACT_MotorStep(ACT_Motor_t *m, float dt_s)
         s->direction = (s->target_omega >= 0.0f) ? 1 : -1;
     }
 
-    /* --- output: frequency from |target|, brake + disable when idle --- */
+    /* --- output: PWM duty from |target|, brake + disable when idle --- */
     drive_omega = fabsf(s->target_omega);
     if (drive_omega < c->stop_threshold)
     {
-        s->pfm_hz  = 0.0f;
+        s->duty_pct = 0.0f;
         s->enabled = 0;
         s->braking = 1;
         m->integral = 0.0f;
@@ -343,11 +435,11 @@ uint8_t ACT_MotorStep(ACT_Motor_t *m, float dt_s)
     else
     {
         if (c->use_pi && s->measured) {
-            float ff = drive_omega / c->rad_s_per_hz;
+            float ff = drive_omega / c->rad_s_per_duty;          /* % duty */
             float error = drive_omega - fabsf(s->meas_omega);
             float u     = ff + c->kp * error + m->integral;
-            int   sat_hi = (u >= c->pfm_max_hz);
-            int   sat_lo = (u <= c->pfm_min_hz);
+            int   sat_hi = (u >= c->duty_max_pct);
+            int   sat_lo = (u <= c->duty_min_pct);
 
             /* Anti-windup đơn giản */
             if (!((sat_hi && error > 0.0f) || (sat_lo && error < 0.0f)))
@@ -355,15 +447,15 @@ uint8_t ACT_MotorStep(ACT_Motor_t *m, float dt_s)
             if (m->integral >  c->integral_max) m->integral =  c->integral_max;
             if (m->integral < -c->integral_max) m->integral = -c->integral_max;
 
-            s->pfm_hz = ff + c->kp * error + m->integral;
+            s->duty_pct = ff + c->kp * error + m->integral;
         }
         else
         {
-            s->pfm_hz = drive_omega / c->rad_s_per_hz;
+            s->duty_pct = drive_omega / c->rad_s_per_duty;
             m->integral = 0.0f;
         }
-        if (s->pfm_hz < c->pfm_min_hz) s->pfm_hz = c->pfm_min_hz;
-        if (s->pfm_hz > c->pfm_max_hz) s->pfm_hz = c->pfm_max_hz;
+        if (s->duty_pct < c->duty_min_pct) s->duty_pct = c->duty_min_pct;
+        if (s->duty_pct > c->duty_max_pct) s->duty_pct = c->duty_max_pct;
         s->enabled = 1;
         s->braking = 0;
     }
@@ -375,7 +467,7 @@ uint8_t ACT_MotorStep(ACT_Motor_t *m, float dt_s)
     }
     else
     {
-        float model_goal = s->enabled ? (float)s->direction * s->pfm_hz * c->rad_s_per_hz : 0.0f;
+        float model_goal = s->enabled ? (float)s->direction * s->duty_pct * c->rad_s_per_duty : 0.0f;
         float tau        = s->braking ? c->sim_tau_s * 0.25f : c->sim_tau_s;
         float a          = (dt_s > 0.0f) ? dt_s / (tau + dt_s) : 0.0f;
         m->sim_omega += a * (model_goal - m->sim_omega);
@@ -383,6 +475,7 @@ uint8_t ACT_MotorStep(ACT_Motor_t *m, float dt_s)
     }
     if (m->hardware && ACT_GpioApply(m) != 0)
     {
+        ACT_GpioSafeOff();                 /* do not leave the last duty running on an I/O error */
         s->status = ACT_STATUS_IO_ERROR;
         m->gpio_ready = 0; /* re-init on next wakeup */
         return s->status;

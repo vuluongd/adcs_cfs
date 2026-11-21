@@ -54,9 +54,10 @@ CFE_Status_t ACT_APP_WheelInit(void)
     if (status == CFE_SUCCESS)
     {
         CFE_EVS_SendEvent(ACT_APP_WHEEL_START_EID, CFE_EVS_EventType_INFORMATION,
-                          "ACT backend=%s Nidec 24H PFM; omega_max=%.0f rad/s slew=%.0f rad/s2 pfm=%.0f..%.0f Hz",
-                          Motor.hardware ? "GPIO" : "SIMULATION", (double)cfg.omega_max_rad_s,
-                          (double)cfg.slew_rad_s2, (double)cfg.pfm_min_hz, (double)cfg.pfm_max_hz);
+                          "ACT backend=%s PWM %.0f Hz; omega_max=%.0f rad/s slew=%.0f rad/s2 duty=%.0f..%.0f %%",
+                          Motor.hardware ? "GPIO" : "SIMULATION", (double)cfg.pwm_freq_hz,
+                          (double)cfg.omega_max_rad_s, (double)cfg.slew_rad_s2,
+                          (double)cfg.duty_min_pct, (double)cfg.duty_max_pct);
     }
     return status;
 }
@@ -92,7 +93,7 @@ void ACT_APP_OnWakeup(void)
     p->cmd_omega_rad_s    = s->cmd_omega;
     p->target_omega_rad_s = s->target_omega;
     p->meas_omega_rad_s   = s->meas_omega;
-    p->pfm_hz             = s->pfm_hz;
+    p->duty_pct           = s->duty_pct;
     p->sample_counter     = ++Counter;
     p->status             = s->status;
     p->valid              = (s->status == ACT_STATUS_OK || s->status == ACT_STATUS_SATURATED) ? 1 : 0;
@@ -115,9 +116,9 @@ void ACT_APP_OnWakeup(void)
 
     if (Counter == 1 || Counter % ACT_APP_WHEEL_PRINT_EVERY == 0)
     {
-        printf(">>> ACT [%u] cmd=%.1f tgt=%.1f meas=%.1f rad/s pfm=%.0f Hz dir=%d en=%d brk=%d sat=%d valid=%d status=%d sim=%d mode=%d\n",
+        printf(">>> ACT [%u] cmd=%.1f tgt=%.1f meas=%.1f rad/s duty=%.1f %% dir=%d en=%d brk=%d sat=%d valid=%d status=%d sim=%d mode=%d\n",
                (unsigned int)p->sample_counter, (double)p->cmd_omega_rad_s, (double)p->target_omega_rad_s,
-               (double)p->meas_omega_rad_s, (double)p->pfm_hz, (int)p->direction, (int)p->enabled,
+               (double)p->meas_omega_rad_s, (double)p->duty_pct, (int)p->direction, (int)p->enabled,
                (int)p->braking, (int)p->saturated, (int)p->valid, (int)p->status, (int)p->simulated,
                (int)p->control_mode);
     }
@@ -133,4 +134,3 @@ void ACT_APP_WheelClose(void)
 {
     ACT_MotorClose(&Motor);
 }
-

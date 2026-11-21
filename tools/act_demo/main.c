@@ -18,9 +18,9 @@ static void tick(ACT_Motor_t *m, float setpoint, int ticks, int realtime)
     for (int i = 0; i < ticks; i++)
     {
         uint8_t st = ACT_MotorStep(m, 0.1f);
-        printf("t=%5.1f cmd=%7.1f tgt=%7.1f meas=%7.1f pfm=%7.0f dir=%+d en=%d brk=%d sat=%d status=%u sim=%u\n",
+        printf("t=%5.1f cmd=%7.1f tgt=%7.1f meas=%7.1f duty=%6.1f%% dir=%+d en=%d brk=%d sat=%d status=%u sim=%u\n",
                i * 0.1, (double)m->st.cmd_omega, (double)m->st.target_omega, (double)m->st.meas_omega,
-               (double)m->st.pfm_hz, m->st.direction, m->st.enabled, m->st.braking, m->st.saturated, st,
+               (double)m->st.duty_pct, m->st.direction, m->st.enabled, m->st.braking, m->st.saturated, st,
                m->st.simulated);
         if (realtime) nanosleep(&ts, NULL);
     }

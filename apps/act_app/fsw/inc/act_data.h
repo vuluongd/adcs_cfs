@@ -17,7 +17,7 @@ typedef struct
     float  cmd_omega_rad_s;    /* off 0  last setpoint received (ACT_CMD), before clamping   */
     float  target_omega_rad_s; /* off 4  setpoint after clamp + slew limiter (what we drive) */
     float  meas_omega_rad_s;   /* off 8  wheel speed: FG-measured if available, else model   */
-    float  pfm_hz;             /* off 12 pulse frequency currently sent to the Nidec driver  */
+    float  duty_pct;           /* off 12 PWM duty (0..100 %) currently sent to the driver    */
     uint32 sample_counter;     /* off 16 increments every wakeup, even on error              */
     uint8  valid;              /* off 20 1 = meas_omega is usable                            */
     uint8  status;             /* off 21 ACT_STATUS_* (0 = OK)                               */
