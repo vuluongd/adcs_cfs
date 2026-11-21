@@ -84,9 +84,16 @@ static int ACT_WriteStr(const char *path, const char *val)
     return (n == (ssize_t)strlen(val)) ? 0 : -1;
 }
 
+/* A control line can be left unconnected: set ACT_APP_GPIO_ENABLE/DIR/BRAKE to "none" (or "-1"). */
+static int ACT_PinUnused(const char *bcm)
+{
+    return strcmp(bcm, "none") == 0 || strcmp(bcm, "-1") == 0 || strcmp(bcm, "off") == 0;
+}
+
 static int ACT_GpioWrite(const char *bcm, int level)
 {
     char path[96];
+    if (ACT_PinUnused(bcm)) return 0;
     snprintf(path, sizeof(path), "/sys/class/gpio/gpio%s/value", bcm);
     return ACT_WriteStr(path, level ? "1" : "0");
 }
@@ -94,6 +101,7 @@ static int ACT_GpioWrite(const char *bcm, int level)
 static int ACT_GpioExportOut(const char *bcm)
 {
     char path[96];
+    if (ACT_PinUnused(bcm)) return 0;
     snprintf(path, sizeof(path), "/sys/class/gpio/gpio%s/direction", bcm);
     if (access(path, W_OK) != 0)
     {
